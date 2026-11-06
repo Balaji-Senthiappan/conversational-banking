@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI Mode Banking Walkthrough</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: scene rail on the left, a fixed-size service map scaled to fit, the current step under it. */
+:root {
+  --bg: #EDF1F4; --surface: #FFFFFF; --panel: #E3E9EE; --ink: #0D2440; --muted: #56677A;
+  --line: #C5CFD8; --wire: #B4C0CB; --hot: #0D2440; --pulse: #E0861A;
+  --rules: #0E6E66; --rules-soft: #D9EEEA; --ai: #A15C08; --ai-soft: #FAEAD1;
+  --bank: #1F4E86; --bank-soft: #DDE7F3; --cust: #6B3FA0; --cust-soft: #ECE3F6;
+  --display: "Schibsted Grotesk", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0C131A; --surface: #142029; --panel: #101921; --ink: #E3EBF1; --muted: #92A3B3;
+  --line: #2A3946; --wire: #31424F; --hot: #E3EBF1; --pulse: #F2A541;
+  --rules: #4CBDAF; --rules-soft: #12332F; --ai: #E7A653; --ai-soft: #36270F;
+  --bank: #8AB3E8; --bank-soft: #172A40; --cust: #C3A2EC; --cust-soft: #2A1E3B; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0C131A; --surface: #142029; --panel: #101921; --ink: #E3EBF1; --muted: #92A3B3;
+  --line: #2A3946; --wire: #31424F; --hot: #E3EBF1; --pulse: #F2A541;
+  --rules: #4CBDAF; --rules-soft: #12332F; --ai: #E7A653; --ai-soft: #36270F;
+  --bank: #8AB3E8; --bank-soft: #172A40; --cust: #C3A2EC; --cust-soft: #2A1E3B; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--display); font-size: 15px; }
+.shell { display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 28px;
+  padding-block: 22px 28px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  max-width: 1720px; margin: 0 auto; }
+
+/* Rail */
+.rail { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); align-self: start; display: grid; gap: 18px; }
+.rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; position: relative; }
+.rail ol::before { content: ""; position: absolute; left: 11px; top: 14px; bottom: 14px; width: 1.5px; background: var(--line); }
+.rail button { all: unset; cursor: pointer; display: grid; grid-template-columns: 24px 1fr; gap: 10px; padding: 7px 6px 7px 0; border-radius: 8px; position: relative; }
+.rail button:focus-visible { outline: 2px solid var(--rules); outline-offset: 2px; }
+.dot { width: 23px; height: 23px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--bg); display: grid; place-items: center;
+  font: 600 11px var(--mono); color: var(--muted); z-index: 1; }
+.rail .slot { font: 500 11.5px var(--mono); color: var(--muted); letter-spacing: .02em; }
+.rail .name { font-weight: 600; font-size: 14.5px; line-height: 1.25; }
+.rail button.now .dot { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.rail button.done .dot { border-color: var(--rules); color: var(--rules); }
+.rail button.now .slot { color: var(--rules); }
+.keys { font-size: 12.5px; color: var(--muted); line-height: 1.9; }
+kbd { font: 500 11px var(--mono); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 1px 5px; background: var(--surface); color: var(--ink); }
+
+/* Header */
+main { min-width: 0; display: grid; gap: 18px; align-content: start; }
+.top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px 24px; align-items: flex-end; }
+.top > div:first-child { min-width: 0; flex: 1 1 520px; }
+.eyebrow { font: 600 13px var(--mono); color: var(--rules); letter-spacing: .03em; }
+h1 { font-size: clamp(26px, 3.1vw, 42px); line-height: 1.08; margin: 6px 0 8px; font-weight: 800; letter-spacing: -.02em; text-wrap: balance; }
+.sub { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.5; max-width: 70ch; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; color: var(--ink); text-decoration: none; }
+a.chip:hover { border-color: var(--ink); }
+a.chip:focus-visible, button.chip:focus-visible { outline: 2px solid var(--rules); outline-offset: 2px; }
+button.chip { cursor: pointer; font-family: inherit; }
+.chip kbd { padding: 0 4px; }
+.clock { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.clock.late { border-color: var(--ai); color: var(--ai); }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 11px; height: 11px; border-radius: 3px; border: 2px solid var(--k); background: var(--ks); }
+
+/* Map */
+.map { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 14px; overflow-x: auto; }
+.sizer { position: relative; margin: 0 auto; }
+.stage { position: absolute; left: 0; top: 0; width: 1440px; height: 730px; transform-origin: 0 0; }
+svg.wires { position: absolute; inset: 0; width: 1440px; height: 730px; overflow: visible; }
+.wire { fill: none; stroke: var(--wire); stroke-width: 1.6; transition: stroke .3s, stroke-width .3s, opacity .3s; }
+.wire.hot { stroke: var(--hot); stroke-width: 2.4; }
+.wires.focus .wire:not(.hot) { opacity: .45; }
+.pulse { fill: var(--pulse); }
+
+[data-kind="ai"] { --k: var(--ai); --ks: var(--ai-soft); }
+[data-kind="rules"] { --k: var(--rules); --ks: var(--rules-soft); }
+[data-kind="bank"], [data-kind="data"] { --k: var(--bank); --ks: var(--bank-soft); }
+[data-kind="channel"], [data-kind="api"], [data-kind="infra"] { --k: var(--ink); --ks: var(--panel); }
+[data-kind="customer"] { --k: var(--cust); --ks: var(--cust-soft); }
+
+.node { position: absolute; background: var(--surface); border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 14px;
+  display: flex; flex-direction: column; gap: 3px; transition: opacity .35s, border-color .35s, box-shadow .35s, background .35s; }
+.node.on { border-color: var(--k); box-shadow: 0 0 0 4px var(--ks); }
+.node.dim { opacity: .36; }
+.node .head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.tag { font: 600 10.5px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--k); }
+.node h3 { margin: 0; font-size: 16.5px; font-weight: 700; letter-spacing: -.01em; }
+.node p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.35; }
+.status { font: 500 12px var(--mono); color: var(--muted); white-space: nowrap; transition: color .3s; }
+.status.changed { color: var(--k); font-weight: 600; }
+.node.dashed { border-style: dashed; background: transparent; }
+.container { position: absolute; border: 1.5px solid var(--line); border-radius: 18px; background: var(--panel); padding: 14px 20px; }
+.container .head { display: flex; justify-content: space-between; align-items: baseline; }
+.container h3 { margin: 0; font-size: 19px; font-weight: 800; }
+.container small { font-size: 12.5px; color: var(--muted); }
+.container .foot { position: absolute; left: 0; right: 0; bottom: 12px; text-align: center; font-size: 12.5px; color: var(--muted); }
+.row { flex-direction: row; align-items: center; justify-content: space-between; padding: 0 14px; border-radius: 10px; }
+.row h3 { font-size: 15.5px; font-weight: 600; }
+.screens { display: grid; gap: 6px; margin-top: 10px; }
+.screens div { border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font-size: 13px; color: var(--muted); transition: all .3s; }
+.screens div.cur { border-color: var(--ink); color: var(--ink); font-weight: 600; background: var(--panel); }
+.phone-note { margin-top: auto !important; font-size: 12px !important; }
+.strip { flex-direction: row; align-items: center; gap: 14px; border-style: dashed; }
+.strip h3 { font-size: 15px; font-weight: 600; margin-right: 8px; }
+.strip .pill { border: 1px solid var(--line); border-radius: 8px; padding: 5px 12px; font-size: 13.5px; font-weight: 600; }
+.strip .status { margin-left: auto; }
+
+/* Step panel */
+.step { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; }
+.step.solo { grid-template-columns: minmax(0, 1fr); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; min-width: 0; }
+.stepmeta { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font: 500 12.5px var(--mono); color: var(--muted); }
+.badge { border-radius: 999px; padding: 3px 10px; font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--k); background: var(--ks); }
+.card h2 { font-size: 21px; margin: 10px 0 6px; letter-spacing: -.01em; }
+.card p { margin: 0; line-height: 1.55; max-width: 68ch; }
+.card ul { margin: 6px 0 0; padding-left: 20px; line-height: 1.6; }
+.doit { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+.doit b { color: var(--ink); font-weight: 600; }
+.wire-label { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+pre { margin: 10px 0 0; font: 13px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
+.dots { display: flex; gap: 6px; margin-top: 14px; flex-wrap: wrap; }
+.dots button { all: unset; cursor: pointer; width: 26px; height: 6px; border-radius: 3px; background: var(--line); }
+.dots button.cur { background: var(--ink); }
+.dots button:focus-visible { outline: 2px solid var(--rules); outline-offset: 3px; }
+.navbtns { display: flex; gap: 8px; margin-top: 14px; }
+.notes { border-style: dashed; }
+.notes p + p { margin-top: 8px; }
+
+@media (max-width: 980px) {
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .rail { position: static; }
+  .rail ol { grid-auto-flow: column; grid-auto-columns: minmax(150px, 1fr); overflow-x: auto; padding-bottom: 6px; }
+  .rail ol::before { display: none; }
+  .keys { display: none; }
+  .step { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="shell">
+  <aside class="rail">
+    <ol id="rail"></ol>
+    <div class="keys"><kbd>←</kbd> <kbd>→</kbd> or a clicker to step through.<br><kbd>T</kbd> clock · <kbd>N</kbd> notes · <kbd>0</kbd>–<kbd>9</kbd> jump</div>
+  </aside>
+  <main>
+    <header class="top">
+      <div>
+        <div class="eyebrow" id="eyebrow"></div>
+        <h1 id="headline"></h1>
+        <p class="sub" id="sub"></p>
+      </div>
+      <div style="display:grid;gap:10px;justify-items:end">
+        <div class="tools">
+          <span class="chip clock" id="clock" hidden>0:00</span>
+          <a class="chip" href="http://localhost:8085" target="_blank" rel="noopener">Open the customer app ↗</a>
+        </div>
+        <div class="legend">
+          <span data-kind="ai"><i></i>AI model</span>
+          <span data-kind="rules"><i></i>Rules, no model</span>
+          <span data-kind="bank"><i></i>Bank system or data</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="map"><div class="sizer" id="sizer"><div class="stage" id="stage"><svg class="wires" id="wires" viewBox="0 0 1440 730"></svg></div></div></div>
+
+    <section class="step">
+      <div class="card" id="stepcard">
+        <div class="stepmeta"><span id="stepcount"></span><span class="badge" id="badge"></span></div>
+        <h2 id="steptitle"></h2>
+        <div id="stepbody"></div>
+        <div class="doit" id="doit"></div>
+        <div class="dots" id="dots"></div>
+        <div class="navbtns">
+          <button class="chip" id="prev" type="button">← Back</button>
+          <button class="chip" id="next" type="button">Next →</button>
+        </div>
+      </div>
+      <div class="card" id="wirecard">
+        <div class="wire-label">On the wire</div>
+        <pre id="payload"></pre>
+      </div>
+    </section>
+    <section class="card notes" id="notes" hidden>
+      <div class="wire-label">Presenter notes</div>
+      <div id="notebody" style="margin-top:8px"></div>
+    </section>
+  </main>
+</div>
+
+<script>
+(() => {
+// ---------- The service map ----------
+const NODES = {
+  app:      { x: 30,   y: 96,  w: 230, h: 316, kind: 'channel', tag: 'Channel', title: 'Mobile banking app', sub: 'Flutter, Android and iOS', status: 'ready', phone: true },
+  omni:     { x: 30,   y: 440, w: 230, h: 92,  kind: 'channel', tag: 'Channel', title: 'WhatsApp, internet banking, web', sub: 'Same API and assistant', status: 'not in this run', dashed: true },
+  session:  { x: 330,  y: 96,  w: 320, h: 52,  kind: 'api', row: true, title: 'Sign-in and session', status: 'ready' },
+  conv:     { x: 330,  y: 162, w: 320, h: 52,  kind: 'api', row: true, title: 'Conversation', status: 'ready' },
+  offers:   { x: 330,  y: 228, w: 320, h: 52,  kind: 'api', row: true, title: 'Today cards and offers', status: 'ready' },
+  consent:  { x: 330,  y: 294, w: 320, h: 52,  kind: 'api', row: true, title: 'Consent (DPDP)', status: 'on record' },
+  gate:     { x: 330,  y: 360, w: 320, h: 52,  kind: 'api', row: true, title: 'Transaction gate', status: 'closed' },
+  events:   { x: 330,  y: 426, w: 320, h: 52,  kind: 'api', row: true, title: 'Salary and bill events', status: 'listening' },
+  audit:    { x: 330,  y: 492, w: 320, h: 52,  kind: 'api', row: true, title: 'Audit log', status: 'recording' },
+  speech:   { x: 730,  y: 40,  w: 300, h: 76,  kind: 'ai', tag: 'AI model', title: 'Speech-to-text', sub: 'Self-hosted, Indian English', status: 'idle' },
+  agent:    { x: 730,  y: 138, w: 300, h: 118, kind: 'ai', tag: 'AI model', title: 'AI agent', sub: 'A fixed list of tools. Proposes, never pays.', status: 'idle' },
+  insights: { x: 730,  y: 282, w: 300, h: 110, kind: 'rules', tag: 'Rules', title: 'Insights engine', sub: 'Recurring payments, cash flow, idle balance. No model.', status: 'idle' },
+  ocv:      { x: 730,  y: 418, w: 300, h: 76,  kind: 'data', tag: 'Data', title: 'One Customer View', sub: 'Feature store built from core data', status: 'ready' },
+  kafka:    { x: 730,  y: 520, w: 300, h: 76,  kind: 'data', tag: 'Data', title: 'Event stream', sub: 'Kafka: credits and presented bills', status: 'flowing' },
+  llm:      { x: 1090, y: 40,  w: 320, h: 100, kind: 'ai', tag: 'AI model', title: 'Private LLM', sub: 'Qwen2.5 7B on the bank’s own GPUs. No internet.', status: 'loaded' },
+  rag:      { x: 1090, y: 160, w: 320, h: 76,  kind: 'ai', tag: 'AI model', title: 'Product and policy knowledge', sub: 'RAG over internal documents only', status: 'indexed' },
+  products: { x: 1090, y: 256, w: 320, h: 76,  kind: 'rules', tag: 'Rules', title: 'Products and NBA rules', sub: 'Rates, eligibility, one offer at a time', status: 'ready' },
+  flex:     { x: 1090, y: 352, w: 320, h: 130, kind: 'bank', tag: 'Core banking', title: 'Oracle FLEXCUBE', sub: 'Savings and current accounts, term deposits, overdraft limits, loans. Reached through its integration gateway.', status: 'live' },
+  payments: { x: 1090, y: 502, w: 320, h: 76,  kind: 'bank', tag: 'Bank system', title: 'Payments hub', sub: 'UPI, BBPS, NEFT and RTGS', status: 'live' },
+  trace:    { x: 30,   y: 655, w: 1380, h: 60, kind: 'infra', strip: true, title: 'One trace for every chat turn', pills: ['OpenTelemetry', 'Evaluation checks', 'Grafana'], status: 'tracing' },
+};
+const SCREENS = { login: 'Sign in', today: 'Today for you', grow: 'Make it work harder', ask: 'Ask' };
+
+const WIRES = {
+  app_session:  [[260,122],[330,122]],
+  app_conv:     [[260,188],[330,188]],
+  app_offers:   [[260,254],[330,254]],
+  app_gate:     [[260,386],[330,386]],
+  conv_speech:  [[650,180],[690,180],[690,78],[730,78]],
+  conv_agent:   [[650,196],[730,196]],
+  agent_llm:    [[1030,160],[1060,160],[1060,90],[1090,90]],
+  agent_rag:    [[1030,200],[1090,200]],
+  agent_ins:    [[880,256],[880,282]],
+  offers_ins:   [[650,254],[680,254],[680,300],[730,300]],
+  consent_ins:  [[650,320],[730,320]],
+  events_ins:   [[650,446],[686,446],[686,372],[730,372]],
+  kafka_events: [[730,566],[698,566],[698,458],[650,458]],
+  session_ocv:  [[650,114],[712,114],[712,448],[730,448]],
+  ins_ocv:      [[880,392],[880,418]],
+  ocv_flex:     [[1030,460],[1090,460]],
+  ins_products: [[1030,306],[1090,306]],
+  gate_flex:    [[650,378],[704,378],[704,405],[1090,405]],
+  gate_pay:     [[650,394],[694,394],[694,507],[1070,507],[1070,540],[1090,540]],
+  pay_flex:     [[1250,502],[1250,482]],
+  flex_kafka:   [[1090,470],[1050,470],[1050,558],[1030,558]],
+  audit_trace:  [[490,544],[490,655]],
+};
+
+// ---------- The script ----------
+const PRIYA = { app: 'Priya', session: 'Priya, signed in', consent: 'on for Priya' };
+const SCENES = [
+  { rail: 'Set the stage', slot: 'Before the clock', eyebrow: 'Before the clock',
+    headline: 'A salary lands. What should the bank do with it?',
+    sub: 'One live run of the mobile app against the bank’s own services, about 10 minutes. Every figure comes from Oracle FLEXCUBE data and fixed rules. The private model understands requests and explains answers. It never sets an amount or moves money.',
+    notes: ['Name the three colours: amber is AI, teal is rules, navy is the bank’s systems of record.', 'FLEXCUBE stays the system of record. Nothing in it changes; the new services read from it and post to it through its integration gateway.', 'Nothing on this map calls the public internet.'],
+    steps: [
+      { title: 'The map', kind: 'infra', nodes: 'all', wires: [],
+        body: '<p>The customer talks to one app. Behind it, the bank’s channel API is the only door to everything else. AI sits to one side and can only call a fixed list of tools. Money moves only through the transaction gate.</p><ul><li>Only the customer moves money.</li><li>Every figure can be traced to a rule and the data behind it.</li><li>Personal data is used only with consent.</li></ul>',
+        doit: 'Open the customer app on the sign-in screen.' },
+    ] },
+
+  { rail: 'Priya signs in', slot: '0:00 to 1:00', eyebrow: '0:00 to 1:00 · Priya signs in', range: [0, 60],
+    headline: 'Priya signs in. Her own data sets the scene.',
+    sub: 'There is no persona switch. What the app shows depends only on what her accounts hold.',
+    notes: ['Priya Sharma, salaried, with Ventura Tech. Mobile 9876500001, MPIN 1111.', 'Stress the consent check before any insight is worked out.'],
+    steps: [
+      { title: 'Sign in', kind: 'customer', nodes: ['app', 'session'], wires: ['app_session'], screen: 'login',
+        status: { session: 'Priya, signed in' },
+        body: '<p>Priya enters her mobile number and MPIN. The session service checks them and binds this device to her.</p>',
+        payload: 'POST /session\n{ mobile: "98765•••01", mpin: "••••" }\n\n200 OK\n{ customerId: "CUST-1001" }',
+        doit: 'Type MPIN <b>1111</b> and tap Sign in.' },
+      { title: 'Check consent first', kind: 'rules', nodes: ['consent', 'session'], wires: [], screen: 'login',
+        status: { consent: 'on for Priya' },
+        body: '<p>Before her data is used for insights, the API reads her consent record. Personal insights and offers are both switched on. Without them she would get a plain balance view and no suggestions.</p>',
+        payload: 'GET /consent/CUST-1001\n{ insights: "granted",\n  offers:   "granted",\n  purpose:  "personal financial guidance" }' },
+      { title: 'Build her One Customer View', kind: 'bank', nodes: ['session', 'ocv', 'flex'], wires: ['session_ocv', 'ocv_flex'], screen: 'login',
+        status: { ocv: 'Priya loaded', flex: 'read CUST-1001' },
+        body: '<p>The feature store pulls one view of Priya from FLEXCUBE: her savings account, 12 months of transactions, deposits, loans and daily balances. Presented bills come in alongside.</p>',
+        payload: 'FLEXCUBE → One Customer View\n  savings balance   ₹1,85,000\n  salary            ₹85,000 on the 1st\n  transactions      12 months\n  daily balances    60 days\n  bills presented   Airtel, credit card' },
+      { title: 'The app is ready', kind: 'customer', nodes: ['app', 'session'], wires: ['app_session:rev'], screen: 'today',
+        body: '<p>The app shows a short loading checklist, then opens on Today for you. The whole load takes about two seconds.</p>',
+        doit: 'Let the checklist finish. Today for you appears.' },
+    ] },
+
+  { rail: 'Today for you', slot: '1:00 to 2:30', eyebrow: '1:00 to 2:30 · Today for you', range: [60, 150], base: PRIYA,
+    headline: 'It’s the 5th. What does Priya usually pay around now?',
+    sub: 'The salary credit starts it. Rules over her own history decide what she sees.',
+    notes: ['Read out one reason line: “Paid on the 5th for 8 months running.”', 'Point out that there are no menus on the screen.'],
+    steps: [
+      { title: 'A salary credit arrives', kind: 'bank', nodes: ['flex', 'kafka', 'events'], wires: ['flex_kafka', 'kafka_events'], screen: 'today',
+        status: { kafka: 'salary credited', events: 'salary ₹85,000 in' },
+        body: '<p>On the 1st FLEXCUBE posts her ₹85,000 salary. The credit is published on the event stream, and the API picks it up.</p>',
+        payload: 'event salary.credited\n{ customerId: "CUST-1001",\n  amount:     85000,\n  from:       "Ventura Tech Pvt Ltd",\n  channel:    "NEFT" }' },
+      { title: 'Find her usual payments', kind: 'rules', nodes: ['events', 'insights', 'ocv'], wires: ['events_ins', 'ins_ocv'], screen: 'today',
+        status: { events: 'salary ₹85,000 in', insights: '3 due now' },
+        body: '<p>The insights engine looks for payments with a steady rhythm: monthly gaps of 25 to 37 days, or weekly ones. It adds presented bills with their due dates, and keeps whatever falls due in the next 4 days.</p>',
+        payload: 'Airtel postpaid   ₹799     paid on the 5th, 8 months running\nAmma              ₹15,000  monthly, between the 1st and 5th\nCredit card bill  ₹12,430  due 9 Nov, usually paid in full' },
+      { title: 'Show three cards', kind: 'customer', nodes: ['insights', 'offers', 'app'], wires: ['offers_ins:rev', 'app_offers:rev'], screen: 'today',
+        body: '<p>Three cards, ₹28,229 in all, each with a reason and one tap to pay. No model was involved. Every line is a rule over her own data.</p>',
+        payload: 'GET /today\n[ Airtel postpaid    799,\n  Amma             15000,\n  Credit card bill 12430 ]\ntotal 28229',
+        doit: 'Show the three cards and the “Do all 3” button.' },
+    ] },
+
+  { rail: 'Pay by voice', slot: '2:30 to 4:00', eyebrow: '2:30 to 4:00 · Pay by voice', range: [150, 240], base: PRIYA,
+    headline: 'She says “Pay Airtel”. The app hears “A Kartel”.',
+    sub: 'Speech and language are AI. Deciding who gets paid, and paying, are not.',
+    notes: ['If the room is noisy, long-press the mic. It “hears” the demo phrase.', 'Ask the room: what would a chatbot do with “A Kartel”? Ours can only choose from her own payees.'],
+    steps: [
+      { title: 'Speech to text', kind: 'ai', nodes: ['app', 'conv', 'speech'], wires: ['app_conv', 'conv_speech'], screen: 'today',
+        status: { speech: '“A Kartel.”', conv: 'turn 1' },
+        body: '<p>Priya taps the mic. Her voice goes to the bank’s own speech service, not a public cloud. The transcript comes back slightly wrong.</p>',
+        payload: 'POST /speech  audio/webm, 1.8 s, en-IN\n\n{ text: "A Kartel.", confidence: 0.61 }',
+        doit: 'Tap the mic and say <b>“Pay Airtel”</b>.' },
+      { title: 'Work out what she means', kind: 'ai', nodes: ['conv', 'agent', 'llm', 'insights'], wires: ['conv_agent', 'agent_llm', 'agent_ins'], screen: 'today',
+        status: { speech: '“A Kartel.”', conv: 'turn 1', agent: 'proposes a payment', llm: 'intent: pay', insights: 'payee matched' },
+        body: '<p>The agent asks the private model what she wants: a payment. It then calls a tool that lists her own payees. “Kartel” is two letters away from “Airtel”, so the match is Airtel postpaid, ₹799. The model picks from her payees and cannot invent one.</p>',
+        payload: 'llm → { intent: "pay", payee_hint: "kartel" }\n\ntool find_payee("kartel")\n  → Airtel postpaid (edit distance 2)\ntool propose_payment(P_AIRTEL, 799)\n  → proposal #P-0412, awaiting customer' },
+      { title: 'Priya confirms', kind: 'customer', nodes: ['app', 'gate'], wires: ['app_gate'], screen: 'today',
+        status: { gate: 'open for #P-0412', agent: 'waiting' },
+        body: '<p>The app shows a confirmation sheet with the payee and amount. The gate opens for this one proposal only when Priya taps Pay on her bound device. The agent has no tool that pays.</p>',
+        doit: 'Tap <b>Pay ₹799</b>. The spinner runs for half a second to a second and a half.' },
+      { title: 'Money moves', kind: 'bank', nodes: ['gate', 'payments', 'flex'], wires: ['gate_pay', 'pay_flex'], screen: 'today',
+        status: { gate: 'open for #P-0412', payments: 'BBPS paid', flex: 'debit ₹799' },
+        body: '<p>The payment goes out through BBPS and FLEXCUBE debits her savings account.</p>',
+        payload: 'POST /payments/bbps\n{ biller: "AIRTEL_POSTPAID", amount: 799 }\n→ paid, ref BB2611050412\n\nFLEXCUBE  debit SB ₹799' },
+      { title: 'Record it and go home', kind: 'rules', nodes: ['audit', 'trace', 'gate', 'app'], wires: ['audit_trace'], screen: 'today',
+        status: { gate: 'closed', audit: '5 entries' },
+        body: '<p>The audit log keeps the transcript, the model’s reading, the proposal, her confirmation and the payment reference. The gate closes. The app goes back to Today and clears the misheard chat.</p>',
+        payload: 'audit  heard      "A Kartel."\naudit  intent     pay → Airtel postpaid\naudit  proposal   #P-0412 ₹799\naudit  confirmed  device-bound tap\naudit  paid       BB2611050412' },
+    ] },
+
+  { rail: 'Make it work harder', slot: '4:00 to 5:30', eyebrow: '4:00 to 5:30 · Make it work harder', range: [240, 330], base: PRIYA,
+    headline: '₹1,85,000 has sat idle in savings for 41 days.',
+    sub: 'The amount comes from rules. The model only puts it into words.',
+    notes: ['Open “How we worked this out” in the app while this scene is on screen.', 'Rates are illustrative.'],
+    steps: [
+      { title: 'Spot the idle money', kind: 'rules', nodes: ['insights', 'ocv'], wires: ['ins_ocv'], screen: 'grow',
+        status: { insights: 'idle 41 days' },
+        body: '<p>Daily balances from FLEXCUBE show more than 1.5 times her monthly income sitting in savings, day after day, for 41 days.</p>',
+        payload: 'threshold  1.5 × ₹85,000 = ₹1,27,500\ndays above threshold  41\nbalance today         ₹1,85,000',
+        doit: 'Tap <b>Make it work harder</b> on Today.' },
+      { title: 'Work out a safe amount', kind: 'rules', nodes: ['insights'], wires: [], screen: 'grow',
+        status: { insights: '₹1,50,000 free' },
+        body: '<p>Keep back everything due before her next salary and a small buffer. Round down so the figure is easy to say.</p>',
+        payload: '  balance              ₹1,85,000\n− due before salary     ₹28,229\n− buffer                ₹5,000\n= ₹1,51,771\nround down to ₹10,000 → ₹1,50,000' },
+      { title: 'Pick one product', kind: 'rules', nodes: ['insights', 'products'], wires: ['ins_products'], screen: 'grow',
+        status: { insights: '₹1,50,000 free', products: 'Auto-sweep FD' },
+        body: '<p>The NBA rules pick one offer. The Auto-sweep FD comes first because the money stays within reach. The rules never suggest investing money she will need, or money that is borrowed.</p>',
+        payload: 'Auto-sweep FD     7.10%   stays within reach   ← offered\nFD, 1 year        7.25%   locked\nRecurring deposit 6.90%   ₹10,000 a month, from salary\n(rates illustrative)' },
+      { title: 'Explain it in plain words', kind: 'ai', nodes: ['agent', 'llm', 'rag', 'offers', 'app'], wires: ['agent_llm', 'agent_rag', 'app_offers:rev'], screen: 'grow',
+        status: { insights: '₹1,50,000 free', products: 'Auto-sweep FD', agent: 'explaining', llm: 'writing', rag: '3 passages' },
+        body: '<p>The model writes the “How we worked this out” text from the product terms in the knowledge base. The figures are handed to it. A check rejects any answer whose numbers differ from the rules engine.</p>',
+        payload: 'rag  "Auto-sweep FD: terms", §2 partial break\nrag  "Savings rate card", Nov 2026\nllm  explanation, 64 words\ncheck  figures match engine ✓' },
+    ] },
+
+  { rail: 'Confirm and book', slot: '5:30 to 6:30', eyebrow: '5:30 to 6:30 · Confirm and book', range: [330, 390], base: { ...PRIYA, products: 'Auto-sweep FD' },
+    headline: 'Priya moves ₹1,50,000. FLEXCUBE books the deposit.',
+    sub: 'The same gate as the payment. Only her confirmation opens it.',
+    notes: ['Change the amount with the stepper to show maturity updating live.'],
+    steps: [
+      { title: 'She adjusts and confirms', kind: 'customer', nodes: ['app', 'gate'], wires: ['app_gate'], screen: 'grow',
+        status: { gate: 'open for this booking' },
+        body: '<p>Priya can change the amount and tenure. Maturity is worked out again with quarterly compounding as she changes them. She taps Confirm.</p>',
+        doit: 'Tap <b>Move ₹1,50,000 to Auto-sweep FD</b>, then Confirm.' },
+      { title: 'Book the term deposit', kind: 'bank', nodes: ['gate', 'flex'], wires: ['gate_flex'], screen: 'grow',
+        status: { gate: 'open for this booking', flex: 'TD booked ₹1,50,000' },
+        body: '<p>The API books an Auto-sweep term deposit in FLEXCUBE, linked to her savings account. If her balance runs short later, only the part she needs is broken.</p>',
+        payload: 'FLEXCUBE  TD booking\n{ product: "SWEEP_FD", amount: 150000,\n  linkedAccount: "SB••••01", rate: 7.10 }\n→ booked, TD ref 0412-2611' },
+      { title: 'Back to Today', kind: 'rules', nodes: ['audit', 'trace', 'gate', 'app'], wires: ['audit_trace', 'app_gate:rev'], screen: 'today',
+        status: { gate: 'closed', audit: 'booking logged' },
+        body: '<p>The booking reference is logged, the gate closes and the app returns to Today.</p>' },
+    ] },
+
+  { rail: 'Questions and answers', slot: '6:30 to 7:30', eyebrow: '6:30 to 7:30 · Questions and answers', range: [390, 450], base: PRIYA,
+    headline: '“Where did my money go this month?”',
+    sub: 'The model reads the question. Rules do the sums.',
+    notes: ['Follow up with “Show weekends” to show a second turn.', 'Mention that a question with no internal answer gets a plain “I can’t help with that here”, never a web search.'],
+    steps: [
+      { title: 'She asks in her own words', kind: 'ai', nodes: ['app', 'conv', 'agent', 'llm'], wires: ['app_conv', 'conv_agent', 'agent_llm'], screen: 'ask',
+        status: { conv: 'turn 1', agent: 'calling a tool', llm: 'intent: spend summary' },
+        body: '<p>The model recognises a spending question. It does not do the arithmetic.</p>',
+        doit: 'Tap the chip or say <b>“Where did my money go this month?”</b>' },
+      { title: 'Count it with rules', kind: 'rules', nodes: ['agent', 'insights', 'ocv'], wires: ['agent_ins', 'ins_ocv'], screen: 'ask',
+        status: { conv: 'turn 1', insights: '₹46,820, up 12%' },
+        body: '<p>A tool adds up her transactions by category: ₹46,820 so far this month, 12% more than at the same point last month. Food grew the most.</p>',
+        payload: 'tool spend_summary(month: "this")\n  total      ₹46,820   +12%\n  Food, Bills, Travel, Shopping\n  biggest rise: Food' },
+      { title: 'Suggest a next step', kind: 'rules', nodes: ['insights', 'consent', 'conv', 'app'], wires: ['consent_ins', 'app_conv:rev'], screen: 'ask',
+        status: { conv: 'turn 1', insights: '₹8,000 cap' },
+        body: '<p>The app offers an ₹8,000 food cap, the average of her last 3 full months, or a look at weekend spending. A cap is a preference she sets. No money moves and the gate stays shut.</p>',
+        doit: 'Tap <b>Set ₹8,000 cap</b> or <b>Show weekends</b>.' },
+    ] },
+
+  { rail: 'Rajesh, same app', slot: '7:30 to 8:45', eyebrow: '7:30 to 8:45 · A business customer', range: [450, 525],
+    base: { app: 'Rajesh', session: 'Rajesh, signed in', consent: 'on for Rajesh' },
+    headline: 'Rajesh signs in. The same app offers credit, not an FD.',
+    sub: 'Nothing in the app changed. His data did.',
+    notes: ['Sign out from the profile menu, then sign in as 9876500002, MPIN 2222.', 'The overdraft raises his available balance, never his own funds.'],
+    steps: [
+      { title: 'His data, not a persona', kind: 'bank', nodes: ['app', 'session', 'ocv', 'flex'], wires: ['app_session', 'session_ocv', 'ocv_flex'], screen: 'today',
+        status: { ocv: 'Rajesh loaded', flex: 'read CUST-2001' },
+        body: '<p>Rajesh runs Iyer Textiles. FLEXCUBE holds his current account at ₹1,80,000, with payroll between the 5th and 7th, ₹60,000 to Sharma Yarns every Thursday and GST on the 20th.</p>',
+        payload: 'FLEXCUBE → One Customer View\n  current account   ₹1,80,000\n  payroll           ~₹95,000, 5th to 7th\n  Sharma Yarns      ₹60,000 every Thursday\n  GST               ~₹42,000 on the 20th\n  receipts          irregular',
+        doit: 'Sign out, then sign in with <b>9876500002</b> and MPIN <b>2222</b>.' },
+      { title: 'Project the next 30 days', kind: 'rules', nodes: ['insights', 'ocv', 'events'], wires: ['ins_ocv', 'events_ins'], screen: 'today',
+        status: { insights: 'below zero this month', events: 'receipts expected' },
+        body: '<p>The engine runs his balance forward day by day: expected receipts in, expected payments out. It goes below zero later this month, when supplier and GST payments fall due before buyers pay.</p>' },
+      { title: 'Offer credit, never an investment', kind: 'rules', nodes: ['insights', 'products'], wires: ['ins_products'], screen: 'grow',
+        status: { insights: 'below zero this month', products: 'overdraft ₹1,50,000' },
+        body: '<p>The rules never suggest investing money he will need. His CIBIL score is 762, above the 700 cut-off, so he is offered an overdraft: the shortfall plus a ₹25,000 buffer, rounded up to the next ₹50,000.</p>',
+        payload: 'lowest projected balance  below zero\n+ buffer                  ₹25,000\nround up to ₹50,000  →  ₹1,50,000\nBusiness overdraft  11.50% (illustrative)\nCIBIL 762 ≥ 700 ✓',
+        doit: 'Tap <b>Stay ahead of cash flow</b>.' },
+      { title: 'He accepts', kind: 'bank', nodes: ['app', 'gate', 'flex'], wires: ['app_gate', 'gate_flex'], screen: 'grow',
+        status: { products: 'overdraft ₹1,50,000', gate: 'open for this limit', flex: 'OD limit set' },
+        body: '<p>FLEXCUBE sets the overdraft limit on his current account. His available balance goes up. His own funds do not.</p>',
+        payload: 'FLEXCUBE  OD limit\n{ account: "CA••••01", limit: 150000,\n  product: "BIZ_OD" }\n→ available balance ₹3,30,000',
+        doit: 'Confirm the overdraft. The app returns to Today.' },
+    ] },
+
+  { rail: 'Under the hood', slot: '8:45 to 10:00', eyebrow: '8:45 to 10:00 · Under the hood', range: [525, 600], base: PRIYA,
+    headline: 'Every turn leaves one trace.',
+    sub: 'What was asked, what the model read, which tools ran and what moved, in one place.',
+    notes: ['If Grafana is open, show the trace of the Airtel payment.'],
+    steps: [
+      { title: 'One trace per turn', kind: 'infra', nodes: ['app', 'conv', 'agent', 'llm', 'insights', 'gate', 'payments', 'flex', 'audit', 'trace'],
+        wires: ['app_conv', 'conv_agent', 'agent_llm', 'agent_ins', 'app_gate', 'gate_pay', 'pay_flex', 'audit_trace'],
+        status: { trace: '1 trace, 11 spans' },
+        body: '<p>Each chat turn carries one trace ID from the app through the API, the agent, the model, the tools and FLEXCUBE. Grafana shows every step and how long it took.</p>',
+        payload: 'trace 7f3a…  "Pay Airtel"\n  speech          310 ms\n  llm intent      420 ms\n  find_payee       18 ms\n  propose_payment  12 ms\n  customer confirm  (waiting)\n  bbps            640 ms\n  flexcube debit  210 ms' },
+      { title: 'Checked, not trusted', kind: 'ai', nodes: ['llm', 'rag', 'agent', 'trace'], wires: ['agent_llm', 'agent_rag'],
+        status: { trace: 'checks passing' },
+        body: '<p>Evaluation checks run on every answer. Figures must match the rules engine, payees must exist, and sources must be internal. An answer that fails falls back to a plain screen with no AI wording.</p>' },
+      { title: 'What is AI, and what isn’t', kind: 'infra', nodes: 'all', wires: [],
+        body: '<ul><li><b>AI:</b> hearing her, working out what she wants, wording the explanation.</li><li><b>Rules:</b> every amount, date and eligibility decision.</li><li><b>Bank systems:</b> every rupee that moves, in FLEXCUBE and the payments hub.</li></ul>' },
+    ] },
+
+  { rail: 'What you have seen', slot: 'Close', eyebrow: 'Close',
+    headline: 'What you have seen',
+    sub: 'Two customers, one app, no menus.',
+    notes: ['Hand over to questions. Leave this scene on screen.'],
+    steps: [
+      { title: 'Recap', kind: 'infra', nodes: 'all', wires: [],
+        body: '<ul><li>The data chose what each customer saw: an FD for Priya, an overdraft for Rajesh.</li><li>Every figure came from FLEXCUBE data and fixed rules.</li><li>The model understood and explained. It never paid.</li><li>Money moved only after the customer confirmed.</li><li>Every turn was consented, logged and traced, inside the bank.</li></ul>' },
+    ] },
+];
+
+// ---------- Build the map ----------
+const stage = document.getElementById('stage');
+const svg = document.getElementById('wires');
+const NS = 'http://www.w3.org/2000/svg';
+const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+
+const api = document.createElement('div');
+api.className = 'container';
+Object.assign(api.style, { left: '310px', top: '40px', width: '360px', height: '590px' });
+api.innerHTML = '<div class="head"><h3>cx-api</h3><small>the bank’s channel API</small></div><div class="foot">stored in PostgreSQL, in the bank’s data centre</div>';
+stage.appendChild(api);
+
+const el = {};
+for (const [id, n] of Object.entries(NODES)) {
+  const d = document.createElement('div');
+  d.className = 'node' + (n.row ? ' row' : '') + (n.strip ? ' strip' : '') + (n.dashed ? ' dashed' : '');
+  d.dataset.kind = n.kind;
+  Object.assign(d.style, { left: n.x + 'px', top: n.y + 'px', width: n.w + 'px', height: n.h + 'px' });
+  if (n.row) d.innerHTML = `<h3>${esc(n.title)}</h3><span class="status"></span>`;
+  else if (n.strip) d.innerHTML = `<h3>${esc(n.title)}</h3>${n.pills.map(p => `<span class="pill">${esc(p)}</span>`).join('')}<span class="status"></span>`;
+  else d.innerHTML = `<div class="head"><span class="tag">${esc(n.tag)}</span><span class="status"></span></div><h3>${esc(n.title)}</h3><p>${esc(n.sub)}</p>` +
+    (n.phone ? `<div class="screens">${Object.entries(SCREENS).map(([k, v]) => `<div data-screen="${k}">${v}</div>`).join('')}</div><p class="phone-note">Speak or type, no menus</p>` : '');
+  stage.appendChild(d);
+  el[id] = d;
+}
+
+function roundedPath(pts, r = 9) {
+  let d = `M${pts[0][0]},${pts[0][1]}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [px, py] = pts[i - 1], [x, y] = pts[i], [nx, ny] = pts[i + 1];
+    const l1 = Math.hypot(x - px, y - py), l2 = Math.hypot(nx - x, ny - y);
+    const k1 = Math.min(r, l1 / 2) / l1, k2 = Math.min(r, l2 / 2) / l2;
+    d += ` L${x - (x - px) * k1},${y - (y - py) * k1} Q${x},${y} ${x + (nx - x) * k2},${y + (ny - y) * k2}`;
+  }
+  const last = pts[pts.length - 1];
+  return d + ` L${last[0]},${last[1]}`;
+}
+const wireEl = {};
+for (const [id, pts] of Object.entries(WIRES)) {
+  const p = document.createElementNS(NS, 'path');
+  p.setAttribute('d', roundedPath(pts));
+  p.setAttribute('class', 'wire');
+  svg.appendChild(p);
+  wireEl[id] = p;
+}
+const pulseLayer = document.createElementNS(NS, 'g');
+svg.appendChild(pulseLayer);
+
+// ---------- Scaling ----------
+const sizer = document.getElementById('sizer');
+const map = document.querySelector('.map');
+function fit() {
+  const avail = map.clientWidth - 28;
+  const sc = Math.max(0.34, Math.min(1.15, avail / 1440));
+  stage.style.transform = `scale(${sc})`;
+  sizer.style.width = 1440 * sc + 'px';
+  sizer.style.height = 730 * sc + 'px';
+}
+new ResizeObserver(fit).observe(map);
+fit();
+
+// ---------- Rail ----------
+const rail = document.getElementById('rail');
+SCENES.forEach((s, i) => {
+  const li = document.createElement('li');
+  const marker = i === 0 ? '○' : i === SCENES.length - 1 ? '●' : String(i);
+  li.innerHTML = `<button type="button"><span class="dot">${marker}</span><span><span class="slot">${esc(s.slot)}</span><br><span class="name">${esc(s.rail)}</span></span></button>`;
+  li.querySelector('button').addEventListener('click', () => go(i, 0));
+  rail.appendChild(li);
+});
+
+// ---------- State ----------
+let S = 0, K = 0, started = null, running = [];
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function render() {
+  const scene = SCENES[S], step = scene.steps[K];
+  document.getElementById('eyebrow').textContent = scene.eyebrow;
+  document.getElementById('headline').textContent = scene.headline;
+  document.getElementById('sub').textContent = scene.sub;
+  [...rail.children].forEach((li, i) => {
+    const b = li.querySelector('button');
+    b.classList.toggle('now', i === S); b.classList.toggle('done', i < S);
+    b.setAttribute('aria-current', i === S ? 'step' : 'false');
+  });
+
+  // Status: defaults, then the scene's base, then each step so far.
+  const status = Object.fromEntries(Object.entries(NODES).map(([id, n]) => [id, n.status]));
+  Object.assign(status, scene.base || {});
+  let screen = 'login';
+  for (let i = 0; i <= K; i++) { Object.assign(status, scene.steps[i].status || {}); if (scene.steps[i].screen) screen = scene.steps[i].screen; }
+  if (!scene.steps.some(s => s.screen)) screen = S === 0 ? 'login' : 'today';
+
+  const on = step.nodes === 'all' ? null : new Set(step.nodes);
+  for (const [id, d] of Object.entries(el)) {
+    d.classList.toggle('on', !!on && on.has(id));
+    d.classList.toggle('dim', !!on && !on.has(id));
+    const st = d.querySelector('.status');
+    st.textContent = status[id];
+    st.classList.toggle('changed', status[id] !== NODES[id].status);
+  }
+  el.app.querySelectorAll('[data-screen]').forEach(x => x.classList.toggle('cur', x.dataset.screen === screen));
+  api.style.opacity = on && !['session', 'conv', 'offers', 'consent', 'gate', 'events', 'audit'].some(r => on.has(r)) ? .55 : 1;
+
+  for (const p of Object.values(wireEl)) p.classList.remove('hot');
+  running = step.wires.map((w, i) => {
+    const [id, dir] = w.split(':');
+    wireEl[id].classList.add('hot');
+    return { path: wireEl[id], len: wireEl[id].getTotalLength(), rev: dir === 'rev', delay: i * 520 };
+  });
+  svg.classList.toggle('focus', running.length > 0);
+  pulseLayer.replaceChildren(...running.map(() => { const c = document.createElementNS(NS, 'circle'); c.setAttribute('r', 5.5); c.setAttribute('class', 'pulse'); return c; }));
+  t0 = performance.now();
+
+  // Step panel
+  const kind = step.kind;
+  document.getElementById('stepcard').dataset.kind = kind;
+  document.getElementById('stepcount').textContent = `Step ${K + 1} of ${scene.steps.length}`;
+  const badge = document.getElementById('badge');
+  badge.dataset.kind = kind;
+  badge.textContent = { ai: 'AI model', rules: 'Rules', bank: 'Bank system', customer: 'Customer', infra: 'Overview' }[kind];
+  document.getElementById('steptitle').textContent = step.title;
+  document.getElementById('stepbody').innerHTML = step.body;
+  const doit = document.getElementById('doit');
+  doit.hidden = !step.doit;
+  doit.innerHTML = step.doit ? `In the app: ${step.doit}` : '';
+  document.getElementById('wirecard').hidden = !step.payload;
+  document.querySelector('.step').classList.toggle('solo', !step.payload);
+  document.getElementById('payload').textContent = step.payload || '';
+  const dots = document.getElementById('dots');
+  dots.replaceChildren(...scene.steps.map((s, i) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = i === K ? 'cur' : '';
+    b.setAttribute('aria-label', `Step ${i + 1}: ${s.title}`); b.addEventListener('click', () => go(S, i)); return b;
+  }));
+  document.getElementById('notebody').innerHTML = scene.notes.map(n => `<p>${esc(n)}</p>`).join('');
+  document.getElementById('prev').disabled = S === 0 && K === 0;
+  document.getElementById('next').disabled = S === SCENES.length - 1 && K === scene.steps.length - 1;
+  tick();
+}
+
+function go(s, k) {
+  S = Math.max(0, Math.min(SCENES.length - 1, s));
+  K = Math.max(0, Math.min(SCENES[S].steps.length - 1, k));
+  if (S > 0 && started === null) started = Date.now();
+  try { history.replaceState(null, '', '#scene-' + S); } catch (e) {}
+  render();
+}
+function next() { const n = SCENES[S].steps.length; if (K < n - 1) go(S, K + 1); else if (S < SCENES.length - 1) go(S + 1, 0); }
+function prev() { if (K > 0) go(S, K - 1); else if (S > 0) go(S - 1, SCENES[S - 1].steps.length - 1); }
+document.getElementById('next').addEventListener('click', next);
+document.getElementById('prev').addEventListener('click', prev);
+
+// ---------- Pulses ----------
+let t0 = performance.now();
+function frame(now) {
+  if (!reduce) {
+    const period = Math.max(2200, running.length * 520 + 1100);
+    running.forEach((r, i) => {
+      const c = pulseLayer.children[i]; if (!c) return;
+      const t = ((now - t0 - r.delay) % period + period) % period;
+      const f = t / 900;
+      if (f > 1 || now - t0 < r.delay) { c.setAttribute('opacity', 0); return; }
+      const pt = r.path.getPointAtLength((r.rev ? 1 - f : f) * r.len);
+      c.setAttribute('cx', pt.x); c.setAttribute('cy', pt.y); c.setAttribute('opacity', 1);
+    });
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ---------- Clock and notes ----------
+const clock = document.getElementById('clock');
+const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+function tick() {
+  const el = (started === null ? 0 : (Date.now() - started) / 1000);
+  const range = SCENES[S].range;
+  clock.textContent = range ? `${fmt(el)} · slot ${fmt(range[0])} to ${fmt(range[1])}` : fmt(el);
+  clock.classList.toggle('late', !!range && el > range[1]);
+}
+setInterval(tick, 1000);
+
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key;
+  if (['ArrowRight', 'PageDown', ' '].includes(k)) { e.preventDefault(); next(); }
+  else if (['ArrowLeft', 'PageUp'].includes(k)) { e.preventDefault(); prev(); }
+  else if (k === 'Home') go(0, 0);
+  else if (k === 't' || k === 'T') clock.hidden = !clock.hidden;
+  else if (k === 'n' || k === 'N') { const n = document.getElementById('notes'); n.hidden = !n.hidden; }
+  else if (/^[0-9]$/.test(k) && +k < SCENES.length) go(+k, 0);
+});
+
+const m = /^#scene-(\d+)$/.exec(location.hash);
+go(m ? +m[1] : 0, 0);
+})();
+</script>
+
+</html>
