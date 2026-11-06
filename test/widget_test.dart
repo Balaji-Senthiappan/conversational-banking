@@ -2,6 +2,7 @@ import 'package:bank_cx_mock/app/clock.dart';
 import 'package:bank_cx_mock/data/mock_bank.dart';
 import 'package:bank_cx_mock/engine/assistant.dart';
 import 'package:bank_cx_mock/engine/insights.dart';
+import 'package:bank_cx_mock/engine/voice_agent.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -55,6 +56,26 @@ void main() {
     final misheard = interpret('A Kartel.', ins, unpaidToday: ins.todayItems()) as PayIntent;
     expect(misheard.items.single.payee.name, 'Airtel postpaid');
     expect(interpret('Hello there', ins, unpaidToday: const []), isA<ReplyIntent>());
+  });
+
+  test('Realtime tool calls map to app actions with engine figures', () async {
+    final ins = CustomerInsights(await api.loadCustomer('CUST-1001'));
+    final cfg = voiceSessionConfig(ins, unpaidToday: ins.todayItems());
+    final tools = [for (final t in cfg['tools'] as List) (t as Map)['name']];
+    expect(tools, ['propose_payment', 'propose_product', 'show_spending', 'open_screen']);
+    expect(cfg['instructions'], contains('Airtel postpaid'));
+
+    final pay = resolveToolCall('propose_payment', {'payee_ids': ['P_AIRTEL']}, ins);
+    expect((pay.intent as PayIntent).items.single.amount, 799);
+    expect(resolveToolCall('propose_payment', {'payee_ids': ['NOBODY']}, ins).intent, isNull);
+
+    final fd = resolveToolCall('propose_product', {'product_code': 'SWEEP_FD'}, ins);
+    expect((fd.intent as OfferIntent).amount, 150000);
+
+    final spend = resolveToolCall('show_spending', {'view': 'summary'}, ins);
+    expect(spend.intent, isA<SpendIntent>());
+    expect(spend.output['month_so_far'], 46820);
+    expect(spend.output['change_pct'], 12);
   });
 
   test('Mock data follows the system clock', () async {

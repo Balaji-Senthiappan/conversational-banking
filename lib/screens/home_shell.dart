@@ -4,6 +4,7 @@ import '../app/theme.dart';
 import '../data/models.dart';
 import '../engine/assistant.dart';
 import '../engine/insights.dart';
+import '../engine/voice_agent.dart';
 import '../state/session.dart';
 import '../widgets/assistant_bar.dart';
 import '../widgets/sheets.dart';
@@ -64,6 +65,12 @@ class HomeShell extends StatelessWidget {
                 hint: hint,
                 voiceSample: voice,
                 onSubmit: (text) => _handle(context, session, text, voice),
+                realtimeSession: () => voiceSessionConfig(session.insights, unpaidToday: session.unpaidToday),
+                onToolCall: (name, args) async {
+                  final outcome = resolveToolCall(name, args, session.insights);
+                  if (outcome.intent != null && context.mounted) _dispatch(context, session, outcome.intent!);
+                  return outcome.output;
+                },
               ),
             ),
           ]),
@@ -81,6 +88,15 @@ class HomeShell extends StatelessWidget {
   /// the request was not understood outside the chat, so they stay where they are.
   String? _handle(BuildContext context, BankSession session, String text, String example) {
     final intent = interpret(text, session.insights, unpaidToday: session.unpaidToday);
+    if (intent case ReplyIntent(:final question) when session.screen != AppScreen.ask) {
+      return 'Didn’t get “$question”. Try “$example”.';
+    }
+    _dispatch(context, session, intent);
+    return null;
+  }
+
+  /// Carries out an intent, whether it came from typed text, device speech or a realtime tool call.
+  static void _dispatch(BuildContext context, BankSession session, AssistantIntent intent) {
     switch (intent) {
       case PayIntent(:final items):
         showPaySheet(context, items);
@@ -94,10 +110,8 @@ class HomeShell extends StatelessWidget {
       case LogoutIntent():
         session.logout();
       case ReplyIntent(:final question, :final reply):
-        if (session.screen != AppScreen.ask) return 'Didn’t get “$question”. Try “$example”.';
         session.reply(question, reply);
     }
-    return null;
   }
 }
 

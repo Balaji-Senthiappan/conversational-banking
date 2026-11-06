@@ -62,6 +62,35 @@ The assistant (`lib/engine/assistant.dart`) uses keyword matching as a stand-in 
 - **Android emulator:** use a system image *with Google Play*. Each emulator session, open **Extended controls (⋯) → Microphone** and turn on **"Virtual microphone uses host audio input"**.
 - The engine is behind `SpeechInput` (`lib/speech/speech_input.dart`), so a self-hosted speech-to-text server can replace it later.
 
+## Live voice with the realtime model (branch `feature/realtime-voice`)
+
+The mic can hold a live conversation with the Azure OpenAI Realtime model (`gpt-realtime-2.1`) over WebRTC. The model hears the customer, answers aloud, and acts through four tools:
+
+- `propose_payment`
+- `propose_product`
+- `show_spending`
+- `open_screen`
+
+Each tool opens the same pay sheet, offer sheet or screen as a typed request. The model never pays; the customer still taps to confirm.
+
+1. Start the token service. It signs in with `az login` and hands the app a short-lived key, so the Azure credential never reaches the device:
+   ```bash
+   python tools/token_service/token_server.py
+   ```
+2. Run the app with the token service's address:
+   - Web: run `run-web-realtime.cmd`, which uses http://localhost:8085.
+   - Android emulator: run
+     ```bash
+     flutter run --dart-define=REALTIME_TOKEN_URL=http://10.0.2.2:8091
+     ```
+3. After sign-in the app connects in the background, and the badge changes to **AI · live**. Tap the mic and speak; tap it again to stop. When a confirmation sheet opens, the mic stops listening.
+
+Without `REALTIME_TOKEN_URL`, or if the connection fails, the mic falls back to the device recogniser, and long-press still gives the demo voice.
+
+The customer's context (payees, what is due, the recommendation) and the tools are built in `lib/engine/voice_agent.dart`. The WebRTC client is in `lib/speech/realtime_voice.dart`. Two test tools live in `tools/`: `tools/realtime_probe` checks tool calling in text mode, and `tools/token_service/webrtc_test.html` checks the WebRTC path from a browser.
+
+For production, the token service should also set the instructions and tools when it mints the key, so the client cannot change them. It should also run with a Managed Identity rather than `az login`.
+
 ## Data model additions
 
 The team's model is kept, and these entities are added for this scenario (`lib/data/models.dart`):

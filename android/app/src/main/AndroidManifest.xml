@@ -1,8 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Voice input for the assistant bar (speech_to_text). -->
+    <!-- Voice input for the assistant bar (speech_to_text and realtime voice over WebRTC). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <!-- usesCleartextTraffic: demo only, so the emulator can reach the local token service on http://10.0.2.2:8091. -->
     <application
+        android:usesCleartextTraffic="true"
         android:label="AI Mode Mock"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">

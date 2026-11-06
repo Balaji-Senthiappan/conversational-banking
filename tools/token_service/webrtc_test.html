@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Realtime WebRTC test</title>
+<style>
+  body { font: 15px system-ui, sans-serif; margin: 24px; max-width: 900px; background: #fff; color: #111; }
+  button { font: inherit; padding: 8px 14px; margin-right: 8px; }
+  pre { background: #f3f5f7; padding: 12px; white-space: pre-wrap; font-size: 12.5px; max-height: 60vh; overflow: auto; }
+</style>
+</head>
+<body>
+<h1>Realtime WebRTC test</h1>
+<p>Connects to Azure over WebRTC with a short-lived key from this token service, then sends a text turn over the data channel and checks for a tool call. "Use mic" sends your microphone instead of silence.</p>
+<button id="go">Connect and send "Pay Airtel"</button>
+<button id="mic">Connect with mic</button>
+<pre id="log"></pre>
+<audio id="out" autoplay></audio>
+<script>
+const log = (...a) => { const s = a.map(x => typeof x === 'string' ? x : JSON.stringify(x)).join(' '); document.getElementById('log').textContent += s + '\n'; console.log(s); };
+window.result = { calls: [], text: '', errors: [], state: 'idle' };
+
+const tools = [{ type: 'function', name: 'propose_payment', description: 'Prepare a payment to a known payee. The customer confirms on screen.',
+  parameters: { type: 'object', properties: { payee_id: { type: 'string', enum: ['P_AIRTEL', 'P_AMMA', 'P_CARD'] } }, required: ['payee_id'] } }];
+
+async function run(useMic) {
+  const t0 = performance.now();
+  const key = await (await fetch('/realtime/session', { method: 'POST' })).json();
+  if (!key.value) { log('token error', key); window.result.errors.push(key); return; }
+  log('key', key.value.slice(0, 6) + '…', 'expires_at', key.expires_at, `(${Math.round(performance.now() - t0)} ms)`);
+
+  const pc = new RTCPeerConnection();
+  pc.ontrack = e => { document.getElementById('out').srcObject = e.streams[0]; };
+  let track;
+  if (useMic) track = (await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })).getAudioTracks()[0];
+  else { const ctx = new AudioContext(); track = ctx.createMediaStreamDestination().stream.getAudioTracks()[0]; }
+  pc.addTrack(track);
+  const dc = pc.createDataChannel('oai-events');
+
+  dc.onopen = () => {
+    log('data channel open', `(${Math.round(performance.now() - t0)} ms)`);
+    dc.send(JSON.stringify({ type: 'session.update', session: { type: 'realtime',
+      instructions: 'You are a bank app voice assistant for Priya. Payees: Airtel postpaid (P_AIRTEL, due 799), Amma (P_AMMA, due 15000), Credit card bill (P_CARD, due 12430). Act through tools; you cannot move money, the customer confirms on screen. Be brief.',
+      tools, tool_choice: 'auto' } }));
+    if (!useMic) {
+      dc.send(JSON.stringify({ type: 'conversation.item.create', item: { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'Pay Airtel' }] } }));
+      dc.send(JSON.stringify({ type: 'response.create' }));
+    }
+  };
+  dc.onmessage = e => {
+    const ev = JSON.parse(e.data);
+    if (!/delta$/.test(ev.type)) log('<-', ev.type);
+    if (ev.type === 'error') { log('ERROR', ev.error); window.result.errors.push(ev.error); }
+    if (ev.type === 'session.updated') log('session tools:', (ev.session.tools || []).length);
+    if (ev.type === 'response.output_audio_transcript.delta' || ev.type === 'response.output_text.delta') window.result.text += ev.delta;
+    if (ev.type === 'conversation.item.input_audio_transcription.completed') log('you said:', ev.transcript);
+    if (ev.type === 'response.function_call_arguments.done') {
+      log('TOOL CALL', ev.name, ev.arguments, `(${Math.round(performance.now() - t0)} ms)`);
+      window.result.calls.push([ev.name, ev.arguments]);
+      dc.send(JSON.stringify({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: ev.call_id, output: JSON.stringify({ status: 'awaiting confirmation on screen' }) } }));
+      dc.send(JSON.stringify({ type: 'response.create' }));
+    }
+    if (ev.type === 'response.done' && window.result.calls.length && !useMic) { window.result.state = 'done'; log('reply:', window.result.text); }
+  };
+
+  await pc.setLocalDescription(await pc.createOffer());
+  const sdp = await fetch(key.calls_url, { method: 'POST', body: pc.localDescription.sdp,
+    headers: { Authorization: 'Bearer ' + key.value, 'Content-Type': 'application/sdp' } });
+  const answer = await sdp.text();
+  if (!sdp.ok) { log('SDP exchange failed', sdp.status, answer.slice(0, 400)); window.result.errors.push(sdp.status); window.result.state = 'failed'; return; }
+  log('SDP answer', sdp.status, `(${Math.round(performance.now() - t0)} ms)`);
+  await pc.setRemoteDescription({ type: 'answer', sdp: answer });
+  window.result.state = 'connected';
+}
+document.getElementById('go').onclick = () => run(false).catch(e => { log('failed', String(e)); window.result.state = 'failed'; });
+document.getElementById('mic').onclick = () => run(true).catch(e => log('failed', String(e)));
+</script>
+</body>
+</html>
