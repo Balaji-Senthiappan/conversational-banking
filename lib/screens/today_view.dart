@@ -31,12 +31,18 @@ class TodayView extends StatelessWidget {
       Text(
         session.todayPlan.isEmpty
             ? 'Nothing is due around now.'
-            : "Here's what you usually do around now. One tap each.",
+            : session.visibleToday.isEmpty
+                ? 'All done. Everything due around now is paid.'
+                : "Here's what you usually do around now. One tap each.",
         style: AppText.sub,
       ),
       const SizedBox(height: 16),
-      for (final o in session.todayPlan) ...[
-        _ObligationCard(o, paid: session.paidPayees.contains(o.payee.payeeId)),
+      for (final o in session.visibleToday) ...[
+        _ObligationCard(
+          o,
+          paid: session.paidPayees.contains(o.payee.payeeId),
+          onClose: () => session.dismissPaid(o.payee.payeeId),
+        ),
         const SizedBox(height: 14),
       ],
       if (session.todayPlan.isNotEmpty)
@@ -58,7 +64,9 @@ class TodayView extends StatelessWidget {
 class _ObligationCard extends StatelessWidget {
   final Obligation o;
   final bool paid;
-  const _ObligationCard(this.o, {required this.paid});
+  /// Removes the card from Today. Only offered once it is paid.
+  final VoidCallback onClose;
+  const _ObligationCard(this.o, {required this.paid, required this.onClose});
 
   @override
   Widget build(BuildContext context) => OutlineCard(
@@ -66,6 +74,18 @@ class _ObligationCard extends StatelessWidget {
           Row(children: [
             Expanded(child: Text(o.payee.name, style: AppText.cardTitle)),
             Text(inr(o.amount), style: AppText.cardTitle),
+            if (paid) ...[
+              const SizedBox(width: 4),
+              // Close a paid card; compact so the row keeps its height.
+              IconButton(
+                tooltip: 'Close',
+                onPressed: onClose,
+                icon: const Icon(Icons.close, size: 20, color: AppColors.muted),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(width: 32, height: 28),
+              ),
+            ],
           ]),
           const SizedBox(height: 6),
           Text(o.reason, style: AppText.note),

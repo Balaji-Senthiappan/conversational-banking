@@ -56,10 +56,24 @@ class BankSession extends ChangeNotifier {
 
   List<Obligation> get unpaidToday => todayPlan.where((o) => !paidPayees.contains(o.payee.payeeId)).toList();
 
-  Future<void> login(String mobile, String mpin) async {
-    final login = _api.authenticate(mobile, mpin);
+  /// Paid cards the customer closed with the "x". They stay paid; the card just leaves Today.
+  final Set<String> dismissedPayees = {};
+
+  /// The cards Today shows: everything in the plan except paid cards the customer closed.
+  List<Obligation> get visibleToday => todayPlan.where((o) => !dismissedPayees.contains(o.payee.payeeId)).toList();
+
+  /// Closes a paid card. Unpaid cards can't be closed, so nothing due goes missing.
+  void dismissPaid(String payeeId) {
+    if (!paidPayees.contains(payeeId)) return;
+    dismissedPayees.add(payeeId);
+    notifyListeners();
+  }
+
+  /// [loginId] is a username ("priya.sharma") or a digits-only mobile number.
+  Future<void> login(String loginId, String mpin) async {
+    final login = _api.authenticate(loginId, mpin);
     if (login == null) {
-      loginError = 'That mobile number and MPIN do not match a demo customer.';
+      loginError = 'That login and MPIN do not match a demo customer.';
       notifyListeners();
       return;
     }
@@ -78,6 +92,7 @@ class BankSession extends ChangeNotifier {
     _setData(data);
     todayPlan = insights.todayItems();
     paidPayees.clear();
+    dismissedPayees.clear();
     askTurns.clear();
     caps.clear();
     screen = AppScreen.today;

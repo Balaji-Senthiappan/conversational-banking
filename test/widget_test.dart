@@ -44,6 +44,15 @@ void main() {
     expect(rec.shortfall, greaterThan(100000));
   });
 
+  test('Login accepts a username or a digits-only mobile number', () {
+    expect(api.authenticate('priya.sharma', '1111')?.customerId, 'CUST-1001');
+    expect(api.authenticate('Priya.Sharma', '1111')?.customerId, 'CUST-1001');
+    expect(api.authenticate('919876500001', '1111')?.customerId, 'CUST-1001');
+    expect(api.authenticate('9876500002', '2222')?.customerId, 'CUST-2001');
+    expect(api.authenticate('+91 9876500001', '1111'), isNull, reason: 'no spaces or +');
+    expect(api.authenticate('priya.sharma', '2222'), isNull);
+  });
+
   test('Assistant maps phrases to actions', () async {
     final ins = CustomerInsights(await api.loadCustomer('CUST-1001'));
     expect(interpret('Pay Amma', ins, unpaidToday: ins.todayItems()), isA<PayIntent>());
