@@ -514,6 +514,10 @@ class CustomerInsights {
     if (best == null) return null;
     final c = best;
     final cap = (_averageFullMonths(c.name, 3) / 1000).roundToDouble() * 1000;
+    // TODO(parked): "mostly on weekends" can contradict the calendar. On 7 Nov 2026 (the
+    // first Saturday) it rests on a single weekend day, Sunday 1 Nov, which a keen eye
+    // will question. Only claim it once at least one full weekend has passed this month,
+    // and say which weekend days it means. See the weekend TODO in mock_bank.dart.
     final weekendShare = weekendSplit(c.name).$1 / c.amount;
     final mostlyWeekends = weekendShare > 0.5;
     final upPct = c.lastMonthSamePoint == 0 ? 100 : ((c.amount / c.lastMonthSamePoint - 1) * 100).round();
