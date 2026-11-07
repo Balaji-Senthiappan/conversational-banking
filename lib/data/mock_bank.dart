@@ -203,6 +203,14 @@ CustomerData _priya() {
     t.debit(_d(2026, month, 8), cardBills[i], 'CREDIT CARD PAYMENT', payee: 'P_CARD', category: 'Card payment');
   }
 
+  // TODO(parked): weekend spends are pinned to day numbers, not weekdays.
+  // The history is moved whole months to follow the clock (_monthShift), which keeps
+  // "paid on the 5th" right but not the weekday: these "Saturdays" (and the Sunday 1 Nov
+  // spends below) only fall on weekends in the 2026 calendar. In other months, and as the
+  // month goes on (e.g. 7 Nov, the first Saturday, adds no weekend spend), the "mostly on
+  // weekends" insight and the "Show weekends" view stop matching the real calendar.
+  // Fix: place dining spends on actual Saturdays and Sundays of each shifted month, the
+  // way Rajesh's Thursday supplier payments are placed, and add spends up to today.
   // Food, Aug to Oct (mostly Saturdays), for the monthly average behind the cap.
   const augSat = [8, 15, 22, 29], augAmt = <double>[2000.0, 1900, 2100, 1800];
   const sepSat = [5, 12, 19, 26], sepAmt = <double>[2000.0, 2100, 2000, 2000];
