@@ -12,18 +12,30 @@ int _monthShift = 0;
 DateTime _today = DateTime(_anchorYear, _anchorMonth, 5);
 
 /// Demo logins for the two mock customers. Test values only.
+/// A demo sign-in. The customer can log in with their [username] ("priya.sharma")
+/// or their mobile number, written as digits only, with or without the 91 country
+/// code ("9876500001" or "919876500001"). Login IDs never contain spaces or "+".
 class DemoLogin {
-  final String mobile;
+  final String username;
+  final String mobile; // 10 digits, no country code
   final String mpin;
   final String customerId;
   final String label;
 
-  const DemoLogin(this.mobile, this.mpin, this.customerId, this.label);
+  const DemoLogin(this.username, this.mobile, this.mpin, this.customerId, this.label);
+
+  /// The mobile number as a login ID: country code and number, digits only.
+  String get mobileLogin => '91$mobile';
+
+  bool matches(String loginId) {
+    final id = loginId.trim().toLowerCase();
+    return id == username || id == mobile || id == mobileLogin;
+  }
 }
 
 const demoLogins = [
-  DemoLogin('9876500001', '1111', 'CUST-1001', 'Priya Sharma · Salaried'),
-  DemoLogin('9876500002', '2222', 'CUST-2001', 'Rajesh Iyer · Business'),
+  DemoLogin('priya.sharma', '9876500001', '1111', 'CUST-1001', 'Priya Sharma · Salaried'),
+  DemoLogin('rajesh.iyer', '9876500002', '2222', 'CUST-2001', 'Rajesh Iyer · Business'),
 ];
 
 /// Illustrative product catalogue. Real rates come from the bank's rate engine.
@@ -82,9 +94,10 @@ ProductOffer product(String code) => productCatalogue.firstWhere((p) => p.code =
 
 /// Stands in for the bank's APIs (CBS, CRM, BBPS, OCV). Returns canned data.
 class MockBankApi {
-  DemoLogin? authenticate(String mobile, String mpin) {
+  /// [loginId] is a username or a digits-only mobile number (see [DemoLogin.matches]).
+  DemoLogin? authenticate(String loginId, String mpin) {
     for (final login in demoLogins) {
-      if (login.mobile == mobile.trim() && login.mpin == mpin.trim()) return login;
+      if (login.matches(loginId) && login.mpin == mpin.trim()) return login;
     }
     return null;
   }

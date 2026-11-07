@@ -18,12 +18,14 @@ You can also run `run-web.cmd`, which serves a release build at http://localhost
 
 ## Sign in
 
-These are the only valid logins. The login screen fills in Priya's mobile number by default, so you only need to type her MPIN. You can also tap a customer card at the bottom of the login screen.
+These are the only valid logins. You can log in with a username, or with the mobile number written as digits only, with or without the 91 country code. A login ID never contains spaces or "+", and the field won't accept them.
 
-| Customer | Mobile number | MPIN | What their data leads to |
+The login screen fills in Priya's username by default, so you only need to type her MPIN. To sign in with one tap, open **Demo customers** at the bottom of the login screen (it starts folded) and tap a customer.
+
+| Customer | Login | MPIN | What their data leads to |
 |---|---|---|---|
-| Priya Sharma, salaried | 9876500001 | 1111 | ₹1,85,000 idle in savings, so the app suggests moving ₹1,50,000 to an Auto-sweep FD |
-| Rajesh Iyer, business | 9876500002 | 2222 | Current account projected to go negative later this month, so the app offers a ₹1,50,000 overdraft |
+| Priya Sharma, salaried | `priya.sharma`, `919876500001` or `9876500001` | 1111 | ₹1,85,000 idle in savings, so the app suggests moving ₹1,50,000 to an Auto-sweep FD |
+| Rajesh Iyer, business | `rajesh.iyer`, `919876500002` or `9876500002` | 2222 | Current account projected to go negative later this month, so the app offers a ₹1,50,000 overdraft |
 
 The persona is not picked in the UI. It comes from the customer's data.
 
@@ -51,6 +53,7 @@ The assistant (`lib/engine/assistant.dart`) uses keyword matching as a stand-in 
 
 - Confirming a payment, deposit or credit shows a spinner for 0.5, 1 or 1.5 seconds, chosen at random, so it feels like a real round trip.
 - When the action succeeds, the app returns to Today and clears the chat.
+- A paid card on Today shows "Paid" and an **×**. Tap the × to close the card. Unpaid cards have no ×, so nothing due can be hidden by mistake.
 - If the assistant doesn't understand you outside the Ask screen, you stay where you are. A hint appears above the input, for example: Didn't get "…". Try "Pay Amma".
 - Payee names tolerate small mishearings, so "A Kartel" is taken to mean Airtel.
 
