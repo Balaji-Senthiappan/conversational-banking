@@ -44,6 +44,16 @@ class RealtimeVoice {
   bool get isUsable => state.value == RealtimeState.ready || state.value == RealtimeState.listening;
 
   /// Connects in the background with the mic muted. Safe to call again.
+  //
+  // TODO(parked, low priority): connecting is slow and sometimes fails.
+  // Seen in testing (Nov 2026): "AI · live" can take 15–30 s after sign-in, one start
+  // reported a connection error, and live voice only came up after a transaction.
+  // Until then the mic quietly uses the device recogniser, which never speaks back.
+  // To look at:
+  //   - start connecting during the sign-in loading checklist, not after it;
+  //   - retry once with a fresh key when the connection fails;
+  //   - keep "still connecting, using the device recogniser" visible while listening;
+  //   - log how long each stage takes (key, getUserMedia, SDP exchange, data channel).
   Future<void> connect(Map<String, dynamic> session) async {
     _session = session;
     if (state.value == RealtimeState.connecting || isUsable) return;
