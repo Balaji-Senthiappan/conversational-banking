@@ -39,11 +39,14 @@ class LoadingScreen extends StatelessWidget {
                             : const Icon(Icons.circle_outlined, color: AppColors.border, size: 22),
                   ),
                   const SizedBox(width: 14),
-                  Text(loadSteps[i],
-                      style: TextStyle(
-                        fontSize: 15.5,
-                        color: i <= session.stepsDone ? AppColors.ink : AppColors.faint,
-                      )),
+                  // Expanded so a long step wraps on narrow screens instead of overflowing.
+                  Expanded(
+                    child: Text(loadSteps[i],
+                        style: TextStyle(
+                          fontSize: 15.5,
+                          color: i <= session.stepsDone ? AppColors.ink : AppColors.faint,
+                        )),
+                  ),
                 ]),
               ),
           ]),

@@ -18,9 +18,20 @@ You can also run `run-web.cmd`, which serves a release build at http://localhost
 
 ## Sign in
 
-These are the only valid logins. You can log in with a username, or with the mobile number written as digits only, with or without the 91 country code. A login ID never contains spaces or "+", and the field won't accept them.
+The login screen follows the client's existing mobile app, from top to bottom:
 
-The login screen fills in Priya's username by default, so you only need to type her MPIN. To sign in with one tap, open **Demo customers** at the bottom of the login screen (it starts folded) and tap a customer.
+- "Welcome Back" and "Login to Continue"
+- the customer
+- "Enter MPIN" with one box per digit
+- "Forgot MPIN?"
+- "Need Help?"
+- "Version 4.0.1"
+
+There is no login-name field, because the phone already knows who the customer is. The demo starts with **Priya**. Type her MPIN and she is signed in as soon as the fourth digit goes in, so there is no Log in button.
+
+To demo Rajesh, tap **Priya ⌄** and pick him from the list. "Forgot MPIN?" and "Need Help?" only show a note, since they aren't part of the demo.
+
+These are the only valid logins. The usernames and digits-only mobile numbers are still accepted by `MockBankApi.authenticate`; the screen uses the username.
 
 | Customer | Login | MPIN | What their data leads to |
 |---|---|---|---|
