@@ -94,7 +94,8 @@ Future<void> showPaySheet(BuildContext context, List<Obligation> items) {
               session.go(AppScreen.grow);
             }),
         ] else
-          ProcessingButton('Confirm with MPIN (demo)', processingLabel: 'Processing payment…', onConfirm: () async {
+          // Labels read like the live app; nothing on a confirmation sheet says "demo".
+          ProcessingButton('Confirm with MPIN', processingLabel: 'Processing payment…', onConfirm: () async {
             final result = session.pay(items);
             Navigator.of(ctx).pop();
             showResult(context, result.message, detail: result.detail);
@@ -269,7 +270,7 @@ class _OfferSheetState extends State<_OfferSheet> {
       else
         const SizedBox(height: 16),
       ProcessingButton(
-        _isCredit ? 'Accept with e-sign (demo)' : 'Confirm with MPIN (demo)',
+        _isCredit ? 'Accept with e-sign' : 'Confirm with MPIN',
         processingLabel: _isCredit ? 'Setting up your credit…' : 'Booking your deposit…',
         onConfirm: () async {
           final result = _isCredit
@@ -285,7 +286,8 @@ class _OfferSheetState extends State<_OfferSheet> {
         },
       ),
       const SizedBox(height: 8),
-      const Center(child: Text('Illustrative rates for the demo', style: TextStyle(fontSize: 12, color: AppColors.faint))),
+      // The rates in productCatalogue are not live, so the sheet still says so, without "demo".
+      const Center(child: Text('Rates shown are illustrative', style: TextStyle(fontSize: 12, color: AppColors.faint))),
     ]);
   }
 }
