@@ -48,6 +48,7 @@ Map<String, dynamic> voiceSessionConfig(CustomerInsights insights, {required Lis
 You are the voice assistant inside ${c.firstName}'s bank app. Speak ${insights.data.profile.voiceAccent}, warmly and briefly: one or two short sentences.
 
 You act only through the tools. Never state an amount, rate or date that is not in the context below or in a tool result.
+Every amount is in Indian rupees. Always say "rupees" (and use lakh and crore for large amounts); never say dollars.
 You cannot move money. Payment and product tools only open a confirmation screen, and the customer confirms there.
 When a tool result has a "say" field, say exactly that sentence and nothing else: it tells the customer how to confirm
 on the screen that is open. Never ask for, repeat or read out the MPIN. Call tools straight away; don't announce them first.
@@ -143,6 +144,17 @@ ${jsonEncode(context)}'''
   };
 }
 
+/// An amount the way it should be spoken: "799 rupees", "15,000 rupees", "1 lakh rupees",
+/// "1.5 lakh rupees". No "₹" sign: the voice read "₹799" as rupees but "₹15,000" as dollars.
+/// Round lakh and crore amounts use those words; anything else keeps Indian digit grouping.
+String spokenRupees(num value) {
+  final v = value.round();
+  String trim(double x) => x.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+  if (v >= 10000000 && v % 100000 == 0) return '${trim(v / 10000000)} crore rupees';
+  if (v >= 100000 && v % 1000 == 0) return '${trim(v / 100000)} lakh rupees';
+  return '${inr(v).replaceAll('₹', '')} ${v == 1 ? 'rupee' : 'rupees'}';
+}
+
 /// A tool call turned into an app action, plus the result to send back to the model.
 class ToolOutcome {
   final AssistantIntent? intent;
@@ -162,8 +174,8 @@ ToolOutcome resolveToolCall(String name, Map<String, dynamic> args, CustomerInsi
         // The exact sentence to speak. Left to choose, the model mixed up the wording for
         // payments, deposits and credit, so the app decides it.
         'say': items.length == 1
-            ? "I've opened the payment of ${inr(total)} to ${items.first.payee.name}. Enter your MPIN to pay."
-            : "I've opened ${items.length} payments, ${inr(total)} in all. Enter your MPIN to pay.",
+            ? "I've opened the payment of ${spokenRupees(total)} to ${items.first.payee.name}. Enter your MPIN to pay."
+            : "I've opened ${items.length} payments, ${spokenRupees(total)} in all. Enter your MPIN to pay.",
         'payments': [for (final o in items) {'payee': o.payee.name, 'amount': o.amount}],
         'total': items.fold<double>(0, (s, o) => s + o.amount),
       });
@@ -182,8 +194,8 @@ ToolOutcome resolveToolCall(String name, Map<String, dynamic> args, CustomerInsi
             : 'confirmation screen shown; the customer enters their MPIN on screen to confirm',
         // The exact sentence to speak (see propose_payment): MPIN for deposits, e-sign for credit.
         'say': isCredit
-            ? "I've opened the $spokenName for ${inr(amount)}. Check the terms, then tap Accept with e-sign."
-            : "I've opened the $spokenName for ${inr(amount)}. Enter your MPIN to confirm.",
+            ? "I've opened the $spokenName for ${spokenRupees(amount)}. Check the terms, then tap Accept with e-sign."
+            : "I've opened the $spokenName for ${spokenRupees(amount)}. Enter your MPIN to confirm.",
         'product': offer.product.name,
         'amount': amount,
         'rate_pct': offer.product.rate,
