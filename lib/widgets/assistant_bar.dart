@@ -15,8 +15,16 @@ class AssistantBar extends StatefulWidget {
   final String voiceSample;
   /// Returns a short message to show above the input (e.g. "Didn't get that"), or null.
   final String? Function(String text) onSubmit;
+  /// The customer's voice accent as a language tag, from their profile (e.g. "en-IN").
+  final String voiceLocale;
 
-  const AssistantBar({super.key, required this.hint, required this.voiceSample, required this.onSubmit});
+  const AssistantBar({
+    super.key,
+    required this.hint,
+    required this.voiceSample,
+    required this.onSubmit,
+    this.voiceLocale = 'en-IN',
+  });
 
   @override
   State<AssistantBar> createState() => _AssistantBarState();
@@ -52,6 +60,7 @@ class _AssistantBarState extends State<AssistantBar> {
     }
     FocusScope.of(context).unfocus();
     try {
+      _deviceSpeech.preferLocale(widget.voiceLocale);
       await _listen(demo ? _demoSpeech : _deviceSpeech);
     } on SpeechUnavailable catch (e) {
       if (!mounted) return;

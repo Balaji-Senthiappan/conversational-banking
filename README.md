@@ -29,7 +29,7 @@ The login screen follows the client's existing mobile app, from top to bottom:
 
 There is no login-name field, because the phone already knows who the customer is. The demo starts with **Priya**. Type her MPIN and she is signed in as soon as the fourth digit goes in, so there is no Log in button.
 
-To demo Rajesh, tap **Priya ⌄** and pick him from the list. "Forgot MPIN?" and "Need Help?" only show a note, since they aren't part of the demo.
+The login screen is fixed to Priya; there is no way to switch customer on it. Rajesh's data is still in `MockBankApi`, and the tests use it. "Forgot MPIN?" and "Need Help?" only show a note, since they aren't part of the demo.
 
 These are the only valid logins. The usernames and digits-only mobile numbers are still accepted by `MockBankApi.authenticate`; the screen uses the username.
 
@@ -62,7 +62,8 @@ The assistant (`lib/engine/assistant.dart`) uses keyword matching as a stand-in 
 
 ## After an action
 
-- Confirming a payment, deposit or credit shows a spinner for 0.5, 1 or 1.5 seconds, chosen at random, so it feels like a real round trip.
+- Payments and deposits are confirmed by typing the MPIN into four boxes, like the login screen. The action goes through on the fourth correct digit; a wrong MPIN clears the boxes and nothing happens. Credit is still accepted with an "Accept with e-sign" button.
+- Once confirmed, a spinner shows for 0.5, 1 or 1.5 seconds, chosen at random, so it feels like a real round trip.
 - When the action succeeds, the app returns to Today and clears the chat.
 - A paid card on Today shows "Paid" and an **×**. Tap the × to close the card. Unpaid cards have no ×, so nothing due can be hidden by mistake.
 - If the assistant doesn't understand you outside the Ask screen, you stay where you are. A hint appears above the input, for example: Didn't get "…". Try "Pay Amma".
@@ -70,7 +71,7 @@ The assistant (`lib/engine/assistant.dart`) uses keyword matching as a stand-in 
 
 ## Voice
 
-- **Tap the mic** to speak. The app uses the device's speech recogniser (`speech_to_text`), preferring Indian English. Words appear as you speak. It stops after 3 seconds of silence, or when you tap again, and the text is then sent to the assistant.
+- **Tap the mic** to speak. The app uses the device's speech recogniser (`speech_to_text`), set to the accent in the customer's profile (`CustomerProfile.voiceAccent` and `voiceLocale`). For Priya that is Indian English (`en-IN`), and the profile menu shows it. Words appear as you speak. It stops after 3 seconds of silence, or when you tap again, and the text is then sent to the assistant.
 - **Long-press the mic** for the demo voice. It "hears" the phrase in the hint, which is a safe fallback for live demos. It also takes over automatically if the device has no recogniser.
 - **Web:** works in Chrome or Edge. Firefox has no speech support.
 - **Android emulator:** use a system image *with Google Play*. Each emulator session, open **Extended controls (⋯) → Microphone** and turn on **"Virtual microphone uses host audio input"**.

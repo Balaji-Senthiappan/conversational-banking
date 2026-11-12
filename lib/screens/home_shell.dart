@@ -63,6 +63,7 @@ class HomeShell extends StatelessWidget {
               child: AssistantBar(
                 hint: hint,
                 voiceSample: voice,
+                voiceLocale: session.data.profile.voiceLocale, // the profile's voice accent
                 onSubmit: (text) => _handle(context, session, text, voice),
               ),
             ),
@@ -135,6 +136,7 @@ class _Header extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text('${session.data.persona.label} · ${session.data.persona.assignedBy}', style: AppText.note),
                   Text('Credit score ${session.data.profile.creditScore}', style: AppText.note),
+                  Text('Voice: ${session.data.profile.voiceAccent}', style: AppText.note),
                 ]),
               ),
               const PopupMenuDivider(),

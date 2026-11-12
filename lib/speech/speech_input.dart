@@ -25,13 +25,21 @@ class SpeechUnavailable implements Exception {
 
 /// Android SpeechRecognizer, iOS Speech framework, Web Speech API in Chrome/Edge.
 class DeviceSpeechInput implements SpeechInput {
-  static const preferredLocales = ['en_IN', 'en-IN'];
-
   final SpeechToText _stt = SpeechToText();
   bool? _ready;
   String? _localeId;
   String _words = '';
   void Function(String)? _onDone;
+
+  /// The customer's voice accent as a language tag (CustomerProfile.voiceLocale).
+  String _wanted = 'en-IN';
+
+  /// Listen for the customer's accent from now on, e.g. "en-IN" for Indian English.
+  void preferLocale(String languageTag) {
+    if (languageTag == _wanted) return;
+    _wanted = languageTag;
+    _localeId = null; // pick again on the next start
+  }
 
   Future<void> _ensureReady() async {
     _ready ??= await _stt.initialize(onError: _handleError, onStatus: _handleStatus);
@@ -39,11 +47,10 @@ class DeviceSpeechInput implements SpeechInput {
       throw const SpeechUnavailable('Speech recognition is not available on this device or browser');
     }
     if (_localeId == null) {
+      // Engines spell the tag either way ("en-IN" or "en_IN"); fall back to the device's own.
+      final wanted = {_wanted, _wanted.replaceAll('-', '_')};
       final locales = await _stt.locales();
-      _localeId = locales
-              .map((l) => l.localeId)
-              .where(preferredLocales.contains)
-              .firstOrNull ??
+      _localeId = locales.map((l) => l.localeId).where(wanted.contains).firstOrNull ??
           (await _stt.systemLocale())?.localeId;
     }
   }
