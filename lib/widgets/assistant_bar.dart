@@ -58,7 +58,10 @@ class _AssistantBarState extends State<AssistantBar> {
   void _startRealtime() {
     final rt = _rt = RealtimeVoice()
       ..onUserSaid = (text) {
-        if (mounted) _controller.text = text;
+        // The transcript arrives on its own schedule, sometimes after the assistant has
+        // already acted and the mic has stopped. Show it only while still listening, so
+        // a late one can't fill the box behind a confirmation sheet.
+        if (mounted && _rtListening) _controller.text = text;
       }
       ..onAssistantText = (text, done) {
         if (mounted) setState(() => _status = text);
