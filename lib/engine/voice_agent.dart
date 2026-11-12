@@ -49,8 +49,8 @@ You are the voice assistant inside ${c.firstName}'s bank app. Speak ${insights.d
 
 You act only through the tools. Never state an amount, rate or date that is not in the context below or in a tool result.
 You cannot move money. Payment and product tools only open a confirmation screen, and the customer confirms there.
-Say so plainly: "I've opened it, enter your MPIN to pay" for payments and deposits, or "tap Accept with e-sign" for credit.
-Never ask for, repeat or read out the MPIN. Call tools straight away; don't announce them first.
+When a tool result has a "say" field, say exactly that sentence and nothing else: it tells the customer how to confirm
+on the screen that is open. Never ask for, repeat or read out the MPIN. Call tools straight away; don't announce them first.
 
 Speech is often misheard. When what the customer says sounds like exactly one payee ("A Kartel" sounds like "Airtel postpaid"),
 propose that payment directly; the confirmation screen is where they check it. Ask only if no payee, or more than one, matches.
@@ -156,8 +156,14 @@ ToolOutcome resolveToolCall(String name, Map<String, dynamic> args, CustomerInsi
       final ids = (args['payee_ids'] as List? ?? const []).cast<String>();
       final items = insights.currentObligations().where((o) => ids.contains(o.payee.payeeId)).toList();
       if (items.isEmpty) return const ToolOutcome(null, {'error': 'No matching payee. Ask the customer who to pay.'});
+      final total = items.fold<double>(0, (s, o) => s + o.amount);
       return ToolOutcome(PayIntent(items), {
         'status': 'confirmation screen shown; the customer enters their MPIN on screen to pay',
+        // The exact sentence to speak. Left to choose, the model mixed up the wording for
+        // payments, deposits and credit, so the app decides it.
+        'say': items.length == 1
+            ? "I've opened the payment of ${inr(total)} to ${items.first.payee.name}. Enter your MPIN to pay."
+            : "I've opened ${items.length} payments, ${inr(total)} in all. Enter your MPIN to pay.",
         'payments': [for (final o in items) {'payee': o.payee.name, 'amount': o.amount}],
         'total': items.fold<double>(0, (s, o) => s + o.amount),
       });
@@ -168,10 +174,16 @@ ToolOutcome resolveToolCall(String name, Map<String, dynamic> args, CustomerInsi
       final offer = rec.offers.where((o) => o.product.code == code).firstOrNull;
       if (offer == null) return const ToolOutcome(null, {'error': 'That product is not offered to this customer.'});
       final amount = (args['amount'] as num?)?.toDouble() ?? offer.amount;
+      final isCredit = offer.product.kind == ProductKind.credit;
+      final spokenName = offer.product.name.replaceAll(' · ', ', '); // "Fixed Deposit, 1 year"
       return ToolOutcome(OfferIntent(offer, amount), {
-        'status': offer.product.kind == ProductKind.credit
+        'status': isCredit
             ? 'confirmation screen shown; the customer taps Accept with e-sign'
             : 'confirmation screen shown; the customer enters their MPIN on screen to confirm',
+        // The exact sentence to speak (see propose_payment): MPIN for deposits, e-sign for credit.
+        'say': isCredit
+            ? "I've opened the $spokenName for ${inr(amount)}. Check the terms, then tap Accept with e-sign."
+            : "I've opened the $spokenName for ${inr(amount)}. Enter your MPIN to confirm.",
         'product': offer.product.name,
         'amount': amount,
         'rate_pct': offer.product.rate,

@@ -93,6 +93,11 @@ void main() {
 
     final fd = resolveToolCall('propose_product', {'product_code': 'SWEEP_FD'}, ins);
     expect((fd.intent as OfferIntent).amount, 150000);
+    // The app decides the confirmation sentence: MPIN for deposits and payments, never "tap".
+    expect(fd.output['say'], contains('Enter your MPIN to confirm'));
+    expect(pay.output['say'], "I've opened the payment of ₹799 to Airtel postpaid. Enter your MPIN to pay.");
+    final fd1y = resolveToolCall('propose_product', {'product_code': 'FD_1Y', 'amount': 100000}, ins);
+    expect(fd1y.output['say'], "I've opened the Fixed Deposit, 1 year for ₹1,00,000. Enter your MPIN to confirm.");
 
     final spend = resolveToolCall('show_spending', {'view': 'summary'}, ins);
     expect(spend.intent, isA<SpendIntent>());
