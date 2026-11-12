@@ -121,17 +121,20 @@ ${jsonEncode(context)}'''
     'audio': {
       'input': {
         // A separate transcript, only so the app can show what it heard; the model
-        // itself works on the audio. No fixed language on purpose: the transcript
-        // should be in whatever language the customer spoke. whisper-1 guesses the
-        // language per turn, and short Indian-accented English was once guessed as
-        // Tamil; the payee names as keywords nudge it towards English (and keep the
-        // names' spelling) without forcing it.
-        // TODO(parked): whisper-1 is deprecated (shutdown announced for 26 Feb 2027).
-        // Once gpt-transcribe (or gpt-live-transcribe) is deployed on the Azure
-        // resource, switch to it with 'languages': ['en', 'ta'] so it only chooses
-        // between the customer's languages.
+        // itself works on the audio. whisper-1 is set to the customer's default
+        // language, the first in their profile (English for Priya), so short
+        // Indian-accented English is no longer written in Tamil script. Payee names
+        // are given as keywords so they are spelt consistently.
+        // Trade-off: Tamil or Hindi speech is shown as English text. The model still
+        // understands it; only the on-screen transcript is affected.
+        // TODO(parked): switch to gpt-live-transcribe with
+        // 'languages': profile.spokenLanguages and 'keywords': payee names, so the
+        // transcript follows the language actually spoken. Deployed on the resource,
+        // but unreliable in testing on 12 Nov 2026 (see TODO.md item 3). whisper-1 is
+        // also deprecated (shutdown announced for 26 Feb 2027).
         'transcription': {
           'model': 'whisper-1',
+          'language': insights.data.profile.spokenLanguages.first,
           'prompt': [for (final o in payees) o.payee.name].join(', '),
         },
         'turn_detection': {'type': 'server_vad', 'silence_duration_ms': 600},

@@ -80,10 +80,11 @@ void main() {
     final tools = [for (final t in cfg['tools'] as List) (t as Map)['name']];
     expect(tools, ['propose_payment', 'propose_product', 'show_spending', 'open_screen']);
     expect(cfg['instructions'], contains('Airtel postpaid'));
-    // The on-screen transcript gets the payee names as hints, but no fixed language:
-    // it should follow whatever language the customer speaks.
+    // The on-screen transcript defaults to the customer's first language (English for
+    // Priya), with the payee names as hints.
     final transcription = (cfg['audio'] as Map)['input']['transcription'] as Map;
-    expect(transcription.containsKey('language'), isFalse);
+    expect(transcription['model'], 'whisper-1');
+    expect(transcription['language'], 'en');
     expect(transcription['prompt'], contains('Amma'));
 
     final pay = resolveToolCall('propose_payment', {'payee_ids': ['P_AIRTEL']}, ins);
