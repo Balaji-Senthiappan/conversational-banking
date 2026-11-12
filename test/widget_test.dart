@@ -47,6 +47,7 @@ void main() {
     final data = await api.loadCustomer('CUST-1001');
     expect(data.profile.voiceAccent, 'Indian English');
     expect(data.profile.voiceLocale, 'en-IN');
+    expect(data.profile.spokenLanguages, ['en', 'ta', 'hi']);
   });
 
   test('Login accepts a username or a digits-only mobile number', () {

@@ -293,6 +293,7 @@ CustomerData _priya() {
       scoreDate: _d(2026, 10, 15),
       voiceAccent: 'Indian English',
       voiceLocale: 'en-IN',
+      spokenLanguages: const ['en', 'ta', 'hi'], // English, Tamil, Hindi
     ),
     employment: const EmploymentDetails(
       customerId: id,
@@ -435,9 +436,10 @@ CustomerData _rajesh() {
       creditScore: 762,
       creditBureau: 'CIBIL',
       scoreDate: _d(2026, 10, 10),
-      // Not specified for Rajesh yet; same default as Priya.
+      // Not specified for Rajesh yet; same defaults as Priya.
       voiceAccent: 'Indian English',
       voiceLocale: 'en-IN',
+      spokenLanguages: const ['en', 'ta', 'hi'],
     ),
     employment: const EmploymentDetails(
       customerId: id,
