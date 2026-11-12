@@ -48,6 +48,10 @@ class CustomerProfile {
   /// The same accent as a language tag (BCP 47), e.g. "en-IN", for speech engines.
   final String voiceLocale;
 
+  /// The languages the customer may speak to the assistant, as ISO 639-1 codes
+  /// (e.g. ["en", "ta", "hi"]). Speech is transcribed in whichever of these was spoken.
+  final List<String> spokenLanguages;
+
   const CustomerProfile({
     required this.customerId,
     required this.occupation,
@@ -59,6 +63,7 @@ class CustomerProfile {
     required this.scoreDate,
     required this.voiceAccent,
     required this.voiceLocale,
+    required this.spokenLanguages,
   });
 }
 

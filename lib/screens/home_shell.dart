@@ -116,6 +116,10 @@ class HomeShell extends StatelessWidget {
   }
 }
 
+/// Display names for CustomerProfile.spokenLanguages codes, shown in the profile menu.
+/// Add a line here when a customer speaks another language (e.g. 'de': 'German').
+const _languageNames = {'en': 'English', 'ta': 'Tamil', 'hi': 'Hindi'};
+
 class _Header extends StatelessWidget {
   final BankSession session;
   const _Header(this.session);
@@ -151,6 +155,8 @@ class _Header extends StatelessWidget {
                   Text('${session.data.persona.label} · ${session.data.persona.assignedBy}', style: AppText.note),
                   Text('Credit score ${session.data.profile.creditScore}', style: AppText.note),
                   Text('Voice: ${session.data.profile.voiceAccent}', style: AppText.note),
+                  Text('Speaks: ${session.data.profile.spokenLanguages.map((c) => _languageNames[c] ?? c).join(', ')}',
+                      style: AppText.note),
                 ]),
               ),
               const PopupMenuDivider(),
