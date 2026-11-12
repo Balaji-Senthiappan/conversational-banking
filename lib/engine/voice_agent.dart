@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../app/format.dart';
+import '../data/models.dart';
 import 'assistant.dart';
 import 'insights.dart';
 
@@ -44,11 +45,12 @@ Map<String, dynamic> voiceSessionConfig(CustomerInsights insights, {required Lis
   return {
     'type': 'realtime',
     'instructions': '''
-You are the voice assistant inside ${c.firstName}'s bank app. Speak Indian English, warmly and briefly: one or two short sentences.
+You are the voice assistant inside ${c.firstName}'s bank app. Speak ${insights.data.profile.voiceAccent}, warmly and briefly: one or two short sentences.
 
 You act only through the tools. Never state an amount, rate or date that is not in the context below or in a tool result.
-You cannot move money. Payment and product tools only open a confirmation screen; the customer taps to confirm.
-Say so plainly ("I've opened it, tap Pay to confirm", or "tap Confirm" for products). Call tools straight away; don't announce them first.
+You cannot move money. Payment and product tools only open a confirmation screen, and the customer confirms there.
+Say so plainly: "I've opened it, enter your MPIN to pay" for payments and deposits, or "tap Accept with e-sign" for credit.
+Never ask for, repeat or read out the MPIN. Call tools straight away; don't announce them first.
 
 Speech is often misheard. When what the customer says sounds like exactly one payee ("A Kartel" sounds like "Airtel postpaid"),
 propose that payment directly; the confirmation screen is where they check it. Ask only if no payee, or more than one, matches.
@@ -139,7 +141,7 @@ ToolOutcome resolveToolCall(String name, Map<String, dynamic> args, CustomerInsi
       final items = insights.currentObligations().where((o) => ids.contains(o.payee.payeeId)).toList();
       if (items.isEmpty) return const ToolOutcome(null, {'error': 'No matching payee. Ask the customer who to pay.'});
       return ToolOutcome(PayIntent(items), {
-        'status': 'confirmation screen shown; the customer must tap Pay',
+        'status': 'confirmation screen shown; the customer enters their MPIN on screen to pay',
         'payments': [for (final o in items) {'payee': o.payee.name, 'amount': o.amount}],
         'total': items.fold<double>(0, (s, o) => s + o.amount),
       });
@@ -151,7 +153,9 @@ ToolOutcome resolveToolCall(String name, Map<String, dynamic> args, CustomerInsi
       if (offer == null) return const ToolOutcome(null, {'error': 'That product is not offered to this customer.'});
       final amount = (args['amount'] as num?)?.toDouble() ?? offer.amount;
       return ToolOutcome(OfferIntent(offer, amount), {
-        'status': 'confirmation screen shown; the customer must tap Confirm',
+        'status': offer.product.kind == ProductKind.credit
+            ? 'confirmation screen shown; the customer taps Accept with e-sign'
+            : 'confirmation screen shown; the customer enters their MPIN on screen to confirm',
         'product': offer.product.name,
         'amount': amount,
         'rate_pct': offer.product.rate,

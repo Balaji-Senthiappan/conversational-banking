@@ -9,6 +9,7 @@ import '../engine/assistant.dart';
 import '../engine/insights.dart';
 import '../state/session.dart';
 import 'common.dart';
+import 'mpin_boxes.dart';
 
 const _sheetTitle = TextStyle(fontSize: 21, fontWeight: FontWeight.w700, color: AppColors.ink);
 
@@ -94,13 +95,19 @@ Future<void> showPaySheet(BuildContext context, List<Obligation> items) {
               session.go(AppScreen.grow);
             }),
         ] else
-          // Labels read like the live app; nothing on a confirmation sheet says "demo".
-          ProcessingButton('Confirm with MPIN', processingLabel: 'Processing payment…', onConfirm: () async {
-            final result = session.pay(items);
-            Navigator.of(ctx).pop();
-            showResult(context, result.message, detail: result.detail);
-            if (result.ok) session.finishAction();
-          }),
+          // The customer confirms by typing their MPIN, as on the login screen; the
+          // payment goes through on the fourth correct digit.
+          MpinConfirm(
+            label: 'Enter MPIN to pay',
+            processingLabel: 'Processing payment…',
+            check: session.checkMpin,
+            onConfirmed: () async {
+              final result = session.pay(items);
+              Navigator.of(ctx).pop();
+              showResult(context, result.message, detail: result.detail);
+              if (result.ok) session.finishAction();
+            },
+          ),
       ]);
     },
   );
@@ -159,6 +166,18 @@ class _OfferSheetState extends State<_OfferSheet> {
       _ => widget.offer.amount,
     };
     final amount = _amount.clamp(_step, maxAmount).toDouble();
+
+    // Books the deposit or sets up the credit, once the customer has confirmed.
+    Future<void> confirm() async {
+      final result = _isCredit ? session.acceptCredit(p, amount, _months) : session.bookDeposit(p, amount, _months);
+      Navigator.of(context).pop();
+      if (result.ok) {
+        await _success(widget.hostContext, result.message, result.detail);
+        session.finishAction();
+      } else {
+        showResult(widget.hostContext, result.message, detail: result.detail);
+      }
+    }
     final isPrimary = rec.offers.isNotEmpty && rec.offers.first.product.code == p.code;
 
     final details = <Widget>[];
@@ -269,22 +288,17 @@ class _OfferSheetState extends State<_OfferSheet> {
         )
       else
         const SizedBox(height: 16),
-      ProcessingButton(
-        _isCredit ? 'Accept with e-sign' : 'Confirm with MPIN',
-        processingLabel: _isCredit ? 'Setting up your credit…' : 'Booking your deposit…',
-        onConfirm: () async {
-          final result = _isCredit
-              ? session.acceptCredit(p, amount, _months)
-              : session.bookDeposit(p, amount, _months);
-          Navigator.of(context).pop();
-          if (result.ok) {
-            await _success(widget.hostContext, result.message, result.detail);
-            session.finishAction();
-          } else {
-            showResult(widget.hostContext, result.message, detail: result.detail);
-          }
-        },
-      ),
+      // Deposits are confirmed with the MPIN boxes, like payments. Credit is accepted
+      // with an e-sign, so it keeps a button.
+      if (_isCredit)
+        ProcessingButton('Accept with e-sign', processingLabel: 'Setting up your credit…', onConfirm: confirm)
+      else
+        MpinConfirm(
+          label: 'Enter MPIN to confirm',
+          processingLabel: 'Booking your deposit…',
+          check: session.checkMpin,
+          onConfirmed: confirm,
+        ),
       const SizedBox(height: 8),
       // The rates in productCatalogue are not live, so the sheet still says so, without "demo".
       const Center(child: Text('Rates shown are illustrative', style: TextStyle(fontSize: 12, color: AppColors.faint))),

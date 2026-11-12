@@ -21,6 +21,8 @@ class AssistantBar extends StatefulWidget {
   /// Realtime voice: the session config (instructions, context, tools) and the tool handler.
   final Map<String, dynamic> Function()? realtimeSession;
   final Future<Map<String, dynamic>> Function(String name, Map<String, dynamic> args)? onToolCall;
+  /// The customer's voice accent as a language tag, from their profile (e.g. "en-IN").
+  final String voiceLocale;
 
   const AssistantBar({
     super.key,
@@ -29,6 +31,7 @@ class AssistantBar extends StatefulWidget {
     required this.onSubmit,
     this.realtimeSession,
     this.onToolCall,
+    this.voiceLocale = 'en-IN',
   });
 
   @override
@@ -124,6 +127,7 @@ class _AssistantBarState extends State<AssistantBar> {
       setState(() => _status = 'Live voice is still connecting. Using the device recogniser this time.');
     }
     try {
+      _deviceSpeech.preferLocale(widget.voiceLocale);
       await _listen(demo ? _demoSpeech : _deviceSpeech);
     } on SpeechUnavailable catch (e) {
       if (!mounted) return;

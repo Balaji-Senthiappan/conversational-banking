@@ -44,6 +44,12 @@ void main() {
     expect(rec.shortfall, greaterThan(100000));
   });
 
+  test('Priya\'s profile carries her voice accent', () async {
+    final data = await api.loadCustomer('CUST-1001');
+    expect(data.profile.voiceAccent, 'Indian English');
+    expect(data.profile.voiceLocale, 'en-IN');
+  });
+
   test('Login accepts a username or a digits-only mobile number', () {
     expect(api.authenticate('priya.sharma', '1111')?.customerId, 'CUST-1001');
     expect(api.authenticate('Priya.Sharma', '1111')?.customerId, 'CUST-1001');

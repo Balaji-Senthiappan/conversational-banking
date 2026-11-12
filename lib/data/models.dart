@@ -42,6 +42,12 @@ class CustomerProfile {
   final String creditBureau;
   final DateTime scoreDate;
 
+  /// The accent the voice assistant should expect and speak, e.g. "Indian English".
+  final String voiceAccent;
+
+  /// The same accent as a language tag (BCP 47), e.g. "en-IN", for speech engines.
+  final String voiceLocale;
+
   const CustomerProfile({
     required this.customerId,
     required this.occupation,
@@ -51,6 +57,8 @@ class CustomerProfile {
     required this.creditScore,
     required this.creditBureau,
     required this.scoreDate,
+    required this.voiceAccent,
+    required this.voiceLocale,
   });
 }
 

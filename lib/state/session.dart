@@ -69,6 +69,12 @@ class BankSession extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The signed-in customer's credentials, kept so confirmation sheets can check the MPIN.
+  DemoLogin? _login;
+
+  /// True when [mpin] is the signed-in customer's MPIN. Used to confirm payments and deposits.
+  bool checkMpin(String mpin) => _login != null && _login!.mpin == mpin.trim();
+
   /// [loginId] is a username ("priya.sharma") or a digits-only mobile number.
   Future<void> login(String loginId, String mpin) async {
     final login = _api.authenticate(loginId, mpin);
@@ -78,6 +84,7 @@ class BankSession extends ChangeNotifier {
       return;
     }
     loginError = null;
+    _login = login;
     loadingName = login.label.split(' ').first;
     stepsDone = 0;
     stage = Stage.loading;
@@ -102,6 +109,7 @@ class BankSession extends ChangeNotifier {
 
   void logout() {
     stage = Stage.loggedOut;
+    _login = null;
     _data = null;
     _insights = null;
     notifyListeners();
