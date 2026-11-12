@@ -121,14 +121,17 @@ ${jsonEncode(context)}'''
     'audio': {
       'input': {
         // A separate transcript, only so the app can show what it heard; the model
-        // itself works on the audio. Without a language the transcriber guesses, and
-        // Indian-accented English sometimes came back in Tamil script. So it gets
-        // the profile's language ("en" from "en-IN") and the payee names as keywords.
-        // TODO(parked): whisper-1 is deprecated (shutdown announced for 26 Feb 2027);
-        // move to a current transcription model once one is deployed on Azure.
+        // itself works on the audio. No fixed language on purpose: the transcript
+        // should be in whatever language the customer spoke. whisper-1 guesses the
+        // language per turn, and short Indian-accented English was once guessed as
+        // Tamil; the payee names as keywords nudge it towards English (and keep the
+        // names' spelling) without forcing it.
+        // TODO(parked): whisper-1 is deprecated (shutdown announced for 26 Feb 2027).
+        // Once gpt-transcribe (or gpt-live-transcribe) is deployed on the Azure
+        // resource, switch to it with 'languages': ['en', 'ta'] so it only chooses
+        // between the customer's languages.
         'transcription': {
           'model': 'whisper-1',
-          'language': insights.data.profile.voiceLocale.split('-').first,
           'prompt': [for (final o in payees) o.payee.name].join(', '),
         },
         'turn_detection': {'type': 'server_vad', 'silence_duration_ms': 600},
